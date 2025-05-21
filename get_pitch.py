@@ -2,22 +2,29 @@ import polars as pl
 import subprocess
 import os
 import json
+import parselmouth
 
 def pitch(filename):
-    output = subprocess.check_output(["praat", "--run", "ExtractF0.praat", filename])
-    pitch = output.decode("utf-8").split("\n")
+    snd = parselmouth.Sound(filename)
+    pitch_obj = snd.to_pitch(time_step=None, pitch_floor=75, pitch_ceiling=600)
+    return [pitch_obj.get_value_in_frame(i) for i in range(pitch_obj.get_number_of_frames())]
+
+
+# def pitch(filename):
+#     output = subprocess.check_output(["praat", "--run", "ExtractF0.praat", filename])
+#     pitch = output.decode("utf-8").split("\n")
     
-    float_values = []
-    for x in pitch:
-        x = x.strip()
-        if not x:
-            continue
-        try:
-            float_values.append(float(x))
-        except ValueError:
-            float_values.append(None)
+#     float_values = []
+#     for x in pitch:
+#         x = x.strip()
+#         if not x:
+#             continue
+#         try:
+#             float_values.append(float(x))
+#         except ValueError:
+#             float_values.append(None)
     
-    return float_values
+#     return float_values
 
 if __name__ == "__main__":
     n = 10
