@@ -14,14 +14,12 @@ class Tone(Enum):
     TONE5 = 5
 
 
-def get_tone(pinyin_word:str) -> Tone:
-    """Detects the tone of pinyin for a single character and generates a corresponding
-    <span> block"""
-    tone1_re = re.compile("[āēīōūǖ]")
-    tone2_re = re.compile("[áéíóúǘ]")
-    tone3_re = re.compile("[ǎěǐǒǔǚ]")
-    tone4_re = re.compile("[àèìòùǜ]")
+tone1_re = re.compile("[āēīōūǖ]")
+tone2_re = re.compile("[áéíóúǘ]")
+tone3_re = re.compile("[ǎěǐǒǔǚ]")
+tone4_re = re.compile("[àèìòùǜ]")
 
+def get_tone(pinyin_word:str) -> Tone:
     if len(tone1_re.findall(pinyin_word)) > 0:
         return Tone.TONE1 
     if len(tone2_re.findall(pinyin_word)) > 0:
