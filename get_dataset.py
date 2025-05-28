@@ -1,14 +1,26 @@
 import os
+from duckdb import df
 import polars as pl
 import numpy as np
+from sympy import use
 
 from get_pitch import pitch
 from tones import get_tones
+from pydub import AudioSegment
 import time
+import librosa
+from common_voice import get_common_voice_dataframe, AUDIO_PATH
 
-def get_dataset(size):
-    df_csv = pl.read_csv("../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/validated.tsv", separator="\t")
-    df_csv = df_csv.sample(size, with_replacement=False)
+def get_dataset(size, use_minimal_duration=False):
+    df_csv = get_common_voice_dataframe()
+
+    if use_minimal_duration:
+        print("with sorting")
+        df_csv = df_csv.sort(pl.col("duration"))
+        df_csv = df_csv.head(size)
+    else:
+        df_csv = df_csv.sample(size, with_replacement=False)
+
     df_csv = df_csv.select(["sentence", "path"])
 
     tone_sequences = []
@@ -29,9 +41,10 @@ def get_dataset(size):
         i += 1
     return (audio, tone_sequences)
 
+
 if __name__ == "__main__":
     import pickle
-    dataset = get_dataset(5000)
+    dataset = get_dataset(100, True)
     # save to picle
-    with open('./data/random_5000_dataset.pkl', 'wb') as f:
-        pickle.dump(dataset, f)
+    # with open('./data/random_5000_dataset.pkl', 'wb') as f:
+    #     pickle.dump(dataset, f)

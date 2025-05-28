@@ -1,0 +1,66 @@
+from sympy import use
+
+
+COMMON_VOICE_PATH="../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/"
+
+AUDIO_PATH = COMMON_VOICE_PATH + "clips/"
+VALIDATED_TSV = COMMON_VOICE_PATH + "validated.tsv"
+
+def get_common_voice_dataframe(useCache=True):
+    import polars as pl
+    import librosa
+    import os
+    from common_voice import get_common_voice_dataframe, AUDIO_PATH
+    
+    df_csv = None
+    if useCache:
+        if os.path.exists("./data/duration_index.parquet"):
+            print("Loading duration index from cache")
+            df_csv = pl.read_parquet("./data/duration_index.parquet")
+        else:
+            useCache = False
+    
+    if not useCache:
+        df_csv = pl.read_csv(VALIDATED_TSV, separator="\t")
+        
+        df_csv = df_csv.with_columns(
+            pl.col("sentence").str.strip_chars().str.replace_all(r"\s+", " ")
+        )
+        durations = [librosa.get_duration(filename=os.path.join("../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/clips/", path)) for path in df_csv["path"]]
+        df_csv = df_csv.with_columns(pl.Series("duration", durations))
+        df_csv = df_csv.sort(pl.col("duration"))
+        df_csv.write_parquet("./data/duration_index.parquet")
+
+    df_csv = df_csv.filter(pl.col("down_votes") == 0)
+    df_csv = df_csv.filter(pl.col("up_votes") > 2)
+    return df_csv
+
+if __name__ == "__main__":
+    import polars as pl
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    df = get_common_voice_dataframe(useCache=True)
+
+
+    # Calculate cumulative number of files over duration
+    df = df.with_columns(pl.col("duration").cast(float))  # Ensure duration is float
+    df_sorted = df.sort("duration")
+    df_sorted = df_sorted.with_columns(pl.Series("cumulative_files", range(1, len(df_sorted) + 1)))
+
+    # Plot cumulative number of files over duration
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(x=df_sorted["duration"], y=df_sorted["cumulative_files"])
+    plt.title("Cumulative Number of Files Over Duration")
+    plt.xlabel("Duration (seconds)")
+    plt.ylabel("Cumulative Number of Files")
+    plt.grid()
+    plt.show()
+
+    # Count number of files shorter than 1s, 2s, and 5s
+    num_files_shorter_than_1s = df.filter(pl.col("duration") < 1).shape[0]
+    num_files_shorter_than_2s = df.filter(pl.col("duration") < 2).shape[0]
+    num_files_shorter_than_5s = df.filter(pl.col("duration") < 5).shape[0]
+
+    print(f"Number of files shorter than 1 second: {num_files_shorter_than_1s}")
+    print(f"Number of files shorter than 2 seconds: {num_files_shorter_than_2s}")
+    print(f"Number of files shorter than 5 seconds: {num_files_shorter_than_5s}")
