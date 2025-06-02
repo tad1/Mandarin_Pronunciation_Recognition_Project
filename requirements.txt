@@ -2,3 +2,11 @@ polars
 zhon
 dragonmapper
 praat-parselmouth
+librosa
+seaborn
+hf-xet
+datasets
+transformers
+IProgress
+soundfile
+accelerate>=0.26.0

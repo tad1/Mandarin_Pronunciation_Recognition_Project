@@ -1,5 +1,6 @@
 # based on: https://github.com/khughitt/anki-chinese/blob/master/ankichinese/pinyin.py
 
+from typing import List
 import re
 from zhon import pinyin
 from dragonmapper import hanzi
@@ -31,10 +32,9 @@ def get_tone(pinyin_word:str) -> Tone:
     else:
         return Tone.TONE5
 
-def get_tones(chinese_phrase:str) -> tuple:
+def get_tones(chinese_phrase:str) -> List[Tone]:
     # first, query pinyin for complete phrase
     pinyin_phrase = hanzi.to_pinyin(chinese_phrase)
-
     # split by syllable and add relevant html container elements
     # e.g. "niǔdài" -> ['niǔ', 'dài']
     pinyin_parts = re.findall(pinyin.syllable, pinyin_phrase)
