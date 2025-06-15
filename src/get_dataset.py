@@ -1,15 +1,9 @@
 import os
-from duckdb import df
 import polars as pl
-import numpy as np
-from sympy import use
 
 from get_pitch import pitch
 from tones import get_tones
-from pydub import AudioSegment
-import time
-import librosa
-from common_voice import get_common_voice_dataframe, AUDIO_PATH
+from data.common_voice import get_common_voice_dataframe, AUDIO_PATH
 
 def get_dataset(size, use_minimal_duration=False):
     df_csv = get_common_voice_dataframe()
@@ -31,7 +25,7 @@ def get_dataset(size, use_minimal_duration=False):
             print(f"Processing {i} out of {size}")
         sentence = row["sentence"]
         path = row["path"]
-        mp3_file = os.path.join("../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/clips/", path)
+        mp3_file = os.path.join(AUDIO_PATH, path)
         
         res = pitch(mp3_file)
         tones = get_tones(sentence)
@@ -44,7 +38,7 @@ def get_dataset(size, use_minimal_duration=False):
 
 if __name__ == "__main__":
     import pickle
-    dataset = get_dataset(100, True)
+    dataset = get_dataset(100, False)
     # save to picle
     # with open('./data/random_5000_dataset.pkl', 'wb') as f:
     #     pickle.dump(dataset, f)

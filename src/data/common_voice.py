@@ -1,7 +1,8 @@
-from sympy import use
+### Allows for use any of Mozilla's Common Voice dataset.
 
-
-COMMON_VOICE_PATH="../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/"
+## Note, here's a coupling with the Filesystem
+import os
+COMMON_VOICE_PATH= os.path.join(os.path.dirname(__file__)) + "/../../../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/"
 
 AUDIO_PATH = COMMON_VOICE_PATH + "clips/"
 VALIDATED_TSV = COMMON_VOICE_PATH + "validated.tsv"
@@ -9,8 +10,6 @@ VALIDATED_TSV = COMMON_VOICE_PATH + "validated.tsv"
 def get_common_voice_dataframe(useCache=True):
     import polars as pl
     import librosa
-    import os
-    from common_voice import get_common_voice_dataframe, AUDIO_PATH
     
     df_csv = None
     if useCache:
@@ -41,7 +40,7 @@ if __name__ == "__main__":
     import seaborn as sns
     df = get_common_voice_dataframe(useCache=True)
 
-
+    print(df)
     # Calculate cumulative number of files over duration
     df = df.with_columns(pl.col("duration").cast(float))  # Ensure duration is float
     df_sorted = df.sort("duration")
