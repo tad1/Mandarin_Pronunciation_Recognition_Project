@@ -3,7 +3,7 @@ import polars as pl
 
 from get_pitch import pitch
 from tones import get_tones
-from data.common_voice import get_common_voice_dataframe, AUDIO_PATH
+from data.source.common_voice import get_common_voice_dataframe, AUDIO_PATH
 
 def get_dataset(size, use_minimal_duration=False):
     df_csv = get_common_voice_dataframe()

@@ -1,7 +1,7 @@
 import os
 import subprocess
 from glob import glob
-from data.pg_experiment import AUDIO_PATH
+from data.source.pg_experiment import AUDIO_PATH
 
 ogg_files = glob(
     os.path.join(

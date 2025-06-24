@@ -26,7 +26,7 @@ def pitch(filename):
 #     return float_values
 
 if __name__ == "__main__":
-    from data.common_voice import VALIDATED_TSV, AUDIO_PATH
+    from data.source.common_voice import VALIDATED_TSV, AUDIO_PATH
     
     n = 10
     df_csv = pl.read_csv(VALIDATED_TSV, separator="\t")

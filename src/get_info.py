@@ -3,7 +3,7 @@ import polars as pl
 from typing import Iterator
 from get_pitch import pitch
 from tones import get_tones
-from data.common_voice import VALIDATED_TSV, AUDIO_PATH as CV_AUDIO_PATH
+from data.source.common_voice import VALIDATED_TSV, AUDIO_PATH as CV_AUDIO_PATH
 
 def get_info(sentence_ids) -> Iterator[tuple[str, str, str]]:
     """Get the info for a given sentence_id"""
