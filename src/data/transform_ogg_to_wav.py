@@ -1,11 +1,11 @@
 import os
 import subprocess
 from glob import glob
+from data.pg_experiment import AUDIO_PATH
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 ogg_files = glob(
     os.path.join(
-        BASE_DIR, "..", "..", "..", "pg_dataset", "recordings", "*", "*", "*.ogg"
+        AUDIO_PATH, "*", "*", "*.ogg"
     )
 )
 

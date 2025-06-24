@@ -2,10 +2,14 @@
 
 ## Note, here's a coupling with the Filesystem
 import os
-COMMON_VOICE_PATH= os.path.join(os.path.dirname(__file__)) + "/../../../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/"
+from path import COMMON_VOICE_PATH, RESULT_DIRECTORY
 
 AUDIO_PATH = COMMON_VOICE_PATH + "clips/"
 VALIDATED_TSV = COMMON_VOICE_PATH + "validated.tsv"
+
+
+
+CACHE_PATH = os.path.join(RESULT_DIRECTORY, "duration_index.parquet")
 
 def get_common_voice_dataframe(useCache=True):
     import polars as pl
@@ -13,9 +17,9 @@ def get_common_voice_dataframe(useCache=True):
     
     df_csv = None
     if useCache:
-        if os.path.exists("./data/duration_index.parquet"):
+        if os.path.exists(CACHE_PATH):
             print("Loading duration index from cache")
-            df_csv = pl.read_parquet("./data/duration_index.parquet")
+            df_csv = pl.read_parquet(CACHE_PATH)
         else:
             useCache = False
     
@@ -25,10 +29,10 @@ def get_common_voice_dataframe(useCache=True):
         df_csv = df_csv.with_columns(
             pl.col("sentence").str.strip_chars().str.replace_all(r"\s+", " ")
         )
-        durations = [librosa.get_duration(filename=os.path.join("../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/clips/", path)) for path in df_csv["path"]]
+        durations = [librosa.get_duration(path=os.path.join(AUDIO_PATH, path)) for path in df_csv["path"]]
         df_csv = df_csv.with_columns(pl.Series("duration", durations))
         df_csv = df_csv.sort(pl.col("duration"))
-        df_csv.write_parquet("./data/duration_index.parquet")
+        df_csv.write_parquet(CACHE_PATH)
 
     df_csv = df_csv.filter(pl.col("down_votes") == 0)
     df_csv = df_csv.filter(pl.col("up_votes") > 2)

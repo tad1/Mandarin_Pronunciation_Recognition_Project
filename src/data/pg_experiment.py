@@ -1,29 +1,33 @@
 import os
-from typing import Tuple
+from path import PG_EXPERIMENT_PATH
 
-import regex
+# NOTE, this code is coupled with dataset filesystem structure:
+# PG_EXPERIMENT_PATH
+# ├── assesment.csv
+# ├── experiment.csv
+# ├── recordings
+# │   ├── stageI
+# │   │   └── {id}
+# │   │       └── {rec_id}.ogg
+# │   └── stageII
+# │       └── {id}
+# │           └── {rec_id}.ogg
+# └── tones_with_label.xls
 
-# Couldn't get the paths to work so added mine.
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-PG_EXPERIMENT_PATH_K = os.path.join(BASE_DIR, "..", "..", "..", "pg_dataset")
-EXPERIMENT_CSV_K = os.path.join(PG_EXPERIMENT_PATH_K, "experiment.csv")
-ASSESMENT_CSV_K = os.path.join(PG_EXPERIMENT_PATH_K, "assesment.csv")
-
-PG_EXPERIMENT_PATH = os.path.join(
-    os.path.dirname(__file__), "../../data/source/pg_dataset/"
-)
-EXPERIMENT_CSV = PG_EXPERIMENT_PATH + "experiment.csv"
-ASSESMENT_CSV = PG_EXPERIMENT_PATH + "assesment.csv"
+EXPERIMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "experiment.csv")
+ASSESMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "assesment.csv")
+AUDIO_PATH = os.path.join(PG_EXPERIMENT_PATH, "recordings/")
 
 import polars as pl
 import polars.selectors as cs
 
 
 # Note, this is fast enought; so I won't cache this
-def get_pg_experiment_dataset(isKamilsPath=False, extension=".ogg"):
-    if isKamilsPath:
-        EXPERIMENT_CSV = EXPERIMENT_CSV_K
-        ASSESMENT_CSV = ASSESMENT_CSV_K
+def get_pg_experiment_dataset(extension=".ogg"):
+    """_summary_
+    Returns:
+        _type_: `df_assesment_pronunciation`, `df_assesment_tone`
+    """
     df_experiment = (
         pl.read_csv(EXPERIMENT_CSV, null_values=["NULL"])
         .select(["id", "univ", "gender", "mother"])
@@ -98,7 +102,7 @@ def get_pg_experiment_dataset(isKamilsPath=False, extension=".ogg"):
 
 
 if __name__ == "__main__":
-
+    # Note, use `python -m data.pg_experiment` from `src/` directory to run this code 
     a, b = get_pg_experiment_dataset()
     print(a)
     print(b)

@@ -3,7 +3,7 @@ import polars as pl
 from typing import Iterator
 from get_pitch import pitch
 from tones import get_tones
-from data.common_voice import VALIDATED_TSV
+from data.common_voice import VALIDATED_TSV, AUDIO_PATH as CV_AUDIO_PATH
 
 def get_info(sentence_ids) -> Iterator[tuple[str, str, str]]:
     """Get the info for a given sentence_id"""
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         sentence_id = row[0]
         path = row[1]
         sentence = row[2]
-        pitch_data = pitch(os.path.join("../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/clips/", path))
+        pitch_data = pitch(os.path.join(CV_AUDIO_PATH, path))
         tones = get_tones(sentence)
         sequences = extract_sequences(pitch_data)
 
