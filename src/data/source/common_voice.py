@@ -4,8 +4,8 @@
 import os
 from path import COMMON_VOICE_PATH, RESULT_DIRECTORY
 
-AUDIO_PATH = COMMON_VOICE_PATH + "clips/"
-VALIDATED_TSV = COMMON_VOICE_PATH + "validated.tsv"
+AUDIO_PATH = os.path.join(COMMON_VOICE_PATH, "clips/")
+VALIDATED_TSV = os.path.join(COMMON_VOICE_PATH, "validated.tsv")
 
 
 
