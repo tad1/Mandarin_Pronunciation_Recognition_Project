@@ -2,7 +2,12 @@ import os
 import subprocess
 from glob import glob
 
-ogg_files = glob("../../../recordings/stageI/*/*.ogg")
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+ogg_files = glob(
+    os.path.join(
+        BASE_DIR, "..", "..", "..", "pg_dataset", "recordings", "*", "*", "*.ogg"
+    )
+)
 
 
 def oggToWav():
@@ -14,3 +19,7 @@ def oggToWav():
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+
+
+if __name__ == "__main__":
+    oggToWav()
