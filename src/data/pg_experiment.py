@@ -3,6 +3,12 @@ from typing import Tuple
 
 import regex
 
+# Couldn't get the paths to work so added mine.
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+PG_EXPERIMENT_PATH_K = os.path.join(BASE_DIR, "..", "..", "..", "pg_dataset")
+EXPERIMENT_CSV_K = os.path.join(PG_EXPERIMENT_PATH_K, "experiment.csv")
+ASSESMENT_CSV_K = os.path.join(PG_EXPERIMENT_PATH_K, "assesment.csv")
+
 PG_EXPERIMENT_PATH = os.path.join(
     os.path.dirname(__file__), "../../data/source/pg_dataset/"
 )
@@ -14,7 +20,10 @@ import polars.selectors as cs
 
 
 # Note, this is fast enought; so I won't cache this
-def get_pg_experiment_dataset():
+def get_pg_experiment_dataset(isKamilsPath=False, extension=".ogg"):
+    if isKamilsPath:
+        EXPERIMENT_CSV = EXPERIMENT_CSV_K
+        ASSESMENT_CSV = ASSESMENT_CSV_K
     df_experiment = (
         pl.read_csv(EXPERIMENT_CSV, null_values=["NULL"])
         .select(["id", "univ", "gender", "mother"])
@@ -46,7 +55,7 @@ def get_pg_experiment_dataset():
                     pl.col("id_student"),
                     pl.lit("/"),
                     pl.col("word_id"),
-                    pl.lit(".ogg"),
+                    pl.lit(extension),
                 ]
             )
         )
@@ -57,7 +66,7 @@ def get_pg_experiment_dataset():
                     pl.col("id_student"),
                     pl.lit("/"),
                     pl.col("word_id"),
-                    pl.lit(".ogg"),
+                    pl.lit(extension),
                 ]
             )
         )
