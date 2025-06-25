@@ -1,11 +1,11 @@
 from math import nan
 import math
 import tensorflow as tf
-from get_dataset import get_dataset
+from path import RESULT_DIRECTORY
 
 def get_tf_dataset(size : int, use_cache = True, use_minimal_duration=True) -> tf.data.Dataset:
     dataset_name = f"tf_{size}_dataset"
-    dataset_dir = "./data"
+    dataset_dir = RESULT_DIRECTORY
     dataset_path = f"{dataset_dir}/{dataset_name}"
     if use_cache:
         if tf.io.gfile.exists(dataset_path):

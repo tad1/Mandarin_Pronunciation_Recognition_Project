@@ -2,7 +2,6 @@ import polars as pl
 import os
 import json
 import parselmouth
-from data.common_voice import VALIDATED_TSV, AUDIO_PATH
 
 def pitch(filename):
     snd = parselmouth.Sound(filename)
@@ -27,6 +26,8 @@ def pitch(filename):
 #     return float_values
 
 if __name__ == "__main__":
+    from data.source.common_voice import VALIDATED_TSV, AUDIO_PATH
+    
     n = 10
     df_csv = pl.read_csv(VALIDATED_TSV, separator="\t")
     df_csv = df_csv.sample(n, with_replacement=False)
