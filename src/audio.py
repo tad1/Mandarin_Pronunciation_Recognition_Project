@@ -12,8 +12,7 @@ if TYPE_CHECKING:
 
 PROJECT_SAMPLING_RATE = 16000
 
-# this project assumes using mono audio, to prevent any errors from stereo/mono ambiguity `load_audio` MUST return audio in mono format  
-USE_MONO = True
+# this project assumes using mono audio, to prevent any errors from stereo/mono ambiguity `load_audio` MUST return audio in mono format
 
 
 @overload
