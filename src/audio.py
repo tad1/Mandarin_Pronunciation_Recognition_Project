@@ -1,11 +1,9 @@
 # The purpose of this code, is to:
 # - provide a source of truth for the sampling rate
-# - handle conversion from path to audio samples in desired format
+# - handle conversion from path to audio samples in desired format (and ensure it's in mono)
 from __future__ import annotations
 from typing import Literal, overload, TYPE_CHECKING
-from os.path import normpath
 from path import fix_path
-import re
 
 if TYPE_CHECKING:
     import torch
@@ -14,17 +12,21 @@ if TYPE_CHECKING:
 
 PROJECT_SAMPLING_RATE = 16000
 
+# this project assumes using mono audio, to prevent any errors from stereo/mono ambiguity `load_audio` MUST return audio in mono format  
+USE_MONO = True
+
 
 @overload
 def load_audio(path: str, return_type: Literal["numpy"]) -> numpy.ndarray: ...
 @overload
 def load_audio(path: str, return_type: Literal["torchaudio"]) -> torch.Tensor: ...
-# Handle `return_type` hinting
+# Somehow Pylance gives only typing support for the last overload
+# this is a workaround to support type hinting for `return_type`
 @overload
 def load_audio(path: str, return_type: Literal["numpy", "torchaudio"]): ...
 
 def load_audio(path: str, return_type: str):
-    path = fix_path(path)  # todo check if it's neseceary
+    path = fix_path(path)
     match return_type:
         case "torchaudio":
             return load_audio_torchaudio(path)
@@ -35,8 +37,8 @@ def load_audio(path: str, return_type: str):
 
 
 def load_audio_librosa(path: str) -> numpy.ndarray:
-    import librosa
-    audio, _ = librosa.load(path, sr=PROJECT_SAMPLING_RATE)
+    from librosa import load
+    audio, _ = load(path, sr=PROJECT_SAMPLING_RATE, mono=True)
     return audio
 
 def load_audio_torchaudio(path: str) -> torch.Tensor:
@@ -46,7 +48,9 @@ def load_audio_torchaudio(path: str) -> torch.Tensor:
     audio, sr = load(path)
     if sr != PROJECT_SAMPLING_RATE:
         audio = resample(audio, sr, PROJECT_SAMPLING_RATE)
-    return audio
+    if audio.size(0) > 1:
+            audio = audio.mean(dim=0, keepdim=True)
+    return audio.squeeze(0)
 
 if __name__ == "__main__":
     from data.source.pg_experiment import AUDIO_PATH, get_pg_experiment_dataset
@@ -57,12 +61,17 @@ if __name__ == "__main__":
     files = [os.path.join(AUDIO_PATH, path.replace("/","\\")) for path in df_pronun["rec_path"]]
     file = files[0]
     
-    audio = load_audio(file, return_type="torchaudio")
+    for i in range(10):
+        print(i)
+        audio = load_audio(file, return_type="torchaudio")
     
     print(file)
     print(audio)
     print(audio.shape)
     
     print("Librosa version:")
-    audio = load_audio(file, return_type="numpy")
+    for i in range(10):
+        print(i)
+        audio = load_audio(file, return_type="numpy")
     print(audio)
+    print(audio.shape)
