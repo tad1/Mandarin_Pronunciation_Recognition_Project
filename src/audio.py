@@ -2,35 +2,42 @@
 # - provide a source of truth for the sampling rate
 # - handle conversion from path to audio samples in desired format
 from __future__ import annotations
-from typing import Literal, overload, TYPE_CHECKING, Iterable
+from typing import Literal, overload, TYPE_CHECKING
 from os.path import normpath
+from path import fix_path
 import re
 
 if TYPE_CHECKING:
     import torch
+    import numpy
 
 
 PROJECT_SAMPLING_RATE = 16000
 
 
 @overload
+def load_audio(path: str, return_type: Literal["numpy"]) -> numpy.ndarray: ...
+@overload
 def load_audio(path: str, return_type: Literal["torchaudio"]) -> torch.Tensor: ...
+# Handle `return_type` hinting
+@overload
+def load_audio(path: str, return_type: Literal["numpy", "torchaudio"]): ...
 
 def load_audio(path: str, return_type: str):
-    path = re.sub(r"/|\\", os.path.sep, path)  # todo check if it's neseceary
+    path = fix_path(path)  # todo check if it's neseceary
     match return_type:
         case "torchaudio":
             return load_audio_torchaudio(path)
+        case "numpy":
+            return load_audio_librosa(path)
         case _:
             raise ValueError(f"Unsupported return type: {return_type}")
 
-@overload
-def load_multiple_audio(paths: Iterable[str], return_type: Literal["torchaudio"]) -> Iterable[torch.Tensor]: ...
-def load_multiple_audio(paths: Iterable[str], return_type: str) -> Iterable[torch.Tensor]:
-    #TODO: handle loading in batch mode
-    #also, move it to a single function?
-    raise NotImplementedError("not implemented yet")
 
+def load_audio_librosa(path: str) -> numpy.ndarray:
+    import librosa
+    audio, _ = librosa.load(path, sr=PROJECT_SAMPLING_RATE)
+    return audio
 
 def load_audio_torchaudio(path: str) -> torch.Tensor:
     from torchaudio import load
@@ -54,5 +61,8 @@ if __name__ == "__main__":
     
     print(file)
     print(audio)
-    print(audio.mean(0, keepdim=True).shape)
     print(audio.shape)
+    
+    print("Librosa version:")
+    audio = load_audio(file, return_type="numpy")
+    print(audio)

@@ -1,5 +1,7 @@
 # This code is responsible to handle coupling between code and paths
 import os
+from os.path import normpath
+import re
 
 PROJECT_ROOT_DIRECTORY = CWD = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SOURCE_DIRECTORY = os.path.join(PROJECT_ROOT_DIRECTORY, "src")
@@ -24,3 +26,6 @@ PG_EXPERIMENT_PATH = os.path.join(DATA_DIRECTORY, "source/pg_dataset/")
     
 
 COMMON_VOICE_PATH= os.path.join(PROJECT_ROOT_DIRECTORY, "../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/")
+
+def fix_path(path:str) -> str:
+    return normpath(re.sub(r"/|\\", os.path.sep, path))
