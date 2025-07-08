@@ -25,6 +25,10 @@ def load_audio(path: str, return_type: Literal["torchaudio"]) -> torch.Tensor: .
 def load_audio(path: str, return_type: Literal["numpy", "torchaudio"]): ...
 
 def load_audio(path: str, return_type: str):
+    """Maps OS path to mono audio in desired format and in project sampling rate.
+    Returns:
+        1D tensor with audio samples (of shape [N])
+    """
     path = fix_path(path)
     match return_type:
         case "torchaudio":
