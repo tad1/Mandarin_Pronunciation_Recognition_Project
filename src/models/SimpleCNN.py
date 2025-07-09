@@ -2,6 +2,7 @@ import torch
 import torchaudio
 import torchaudio.transforms as T
 from torch.utils.data import Dataset, DataLoader
+from audio import load_audio, PROJECT_SAMPLING_RATE
 import polars as pl
 import os
 import torch.nn.functional as F
@@ -11,7 +12,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 class PronunciationDataset(Dataset):
-    def __init__(self, data: pl.DataFrame, base_dir, sample_rate=22050, n_mels=128):
+    def __init__(self, data: pl.DataFrame, base_dir, sample_rate=PROJECT_SAMPLING_RATE, n_mels=128):
         self.data = data
         self.base_dir = base_dir
         self.sample_rate = sample_rate
@@ -32,19 +33,12 @@ class PronunciationDataset(Dataset):
         rec_path = row[3]
         label = row[1]
         full_path = os.path.normpath(os.path.join(self.base_dir, rec_path))
-        waveform, sr = torchaudio.load(full_path)
 
         if not os.path.exists(full_path):
             raise FileNotFoundError(f"Audio file not found: {full_path}")
 
-        # Convert to mono if needed
-        if waveform.shape[0] > 1:
-            waveform = waveform.mean(dim=0, keepdim=True)
-
-        # Resample
-        if sr != self.sample_rate:
-            waveform = T.Resample(orig_freq=sr, new_freq=self.sample_rate)(waveform)
-
+        waveform = load_audio(full_path, return_type="torchaudio").reshape(1, -1)
+        
         # Voice Activity Detection
         trimmed_waveform = torchaudio.functional.vad(
             waveform, sample_rate=self.sample_rate
