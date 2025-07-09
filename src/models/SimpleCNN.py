@@ -12,7 +12,13 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 class PronunciationDataset(Dataset):
-    def __init__(self, data: pl.DataFrame, base_dir, sample_rate=PROJECT_SAMPLING_RATE, n_mels=128):
+    def __init__(
+        self,
+        data: pl.DataFrame,
+        base_dir,
+        sample_rate=PROJECT_SAMPLING_RATE,
+        n_mels=128,
+    ):
         self.data = data
         self.base_dir = base_dir
         self.sample_rate = sample_rate
@@ -38,7 +44,7 @@ class PronunciationDataset(Dataset):
             raise FileNotFoundError(f"Audio file not found: {full_path}")
 
         waveform = load_audio(full_path, return_type="torchaudio").reshape(1, -1)
-        
+
         # Voice Activity Detection
         trimmed_waveform = torchaudio.functional.vad(
             waveform, sample_rate=self.sample_rate
@@ -100,6 +106,9 @@ class SimpleCNN(nn.Module):
 def train(model, dataloader, optimizer, criterion, device):
     model.train()
     total_loss = 0
+    total_correct = 0
+    total_samples = 0
+
     for specs, labels in dataloader:
         specs, labels = specs.to(device), labels.to(device)
         optimizer.zero_grad()
@@ -108,7 +117,14 @@ def train(model, dataloader, optimizer, criterion, device):
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * specs.size(0)
-    return total_loss / len(dataloader.dataset)
+
+        preds = (outputs >= 0.5).float()
+        total_correct += (preds == labels).sum().item()
+        total_samples += labels.size(0)
+
+    avg_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
+    return avg_loss, accuracy
 
 
 def evaluate(model, dataloader, criterion, device):

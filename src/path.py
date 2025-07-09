@@ -30,7 +30,10 @@ AUDIO_PATH = os.path.join(PG_EXPERIMENT_PATH, "recordings/")
 # │           └── {rec_id}.ogg
 # └── tones_with_label.xls
 
-COMMON_VOICE_PATH= os.path.join(PROJECT_ROOT_DIRECTORY, "../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/")
+COMMON_VOICE_PATH = os.path.join(
+    PROJECT_ROOT_DIRECTORY, "../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/"
+)
 
-def fix_path(path:str) -> str:
-    return normpath(re.sub(r"/|\\", os.path.sep, path))
+
+def fix_path(path: str) -> str:
+    return normpath(re.sub(r"[\\/]", r"\\" if os.path.sep == "\\" else "/", path))
