@@ -11,6 +11,8 @@ RESULT_DIRECTORY = os.path.join(PROJECT_ROOT_DIRECTORY, "res")
 DATA_DIRECTORY = os.path.join(PROJECT_ROOT_DIRECTORY, "data")
 DOCUMENTATION_DIRECTORY = os.path.join(PROJECT_ROOT_DIRECTORY, "doc")
 
+SECRET_ENV = os.path.join(SOURCE_DIRECTORY, ".secrets.env")
+
 # source dataset paths
 PG_EXPERIMENT_PATH = os.path.join(DATA_DIRECTORY, "source/pg_dataset/")
 EXPERIMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "experiment.csv")

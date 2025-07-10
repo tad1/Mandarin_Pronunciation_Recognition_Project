@@ -135,6 +135,7 @@ celerybeat.pid
 
 # Environments
 .env
+.secrets.env
 .envrc
 .venv
 env/
@@ -206,4 +207,4 @@ marimo/_lsp/
 __marimo__/
 
 # wandb
-src/wandb
+src/wandb/
