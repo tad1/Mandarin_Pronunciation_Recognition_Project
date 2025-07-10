@@ -11,6 +11,8 @@ RESULT_DIRECTORY = os.path.join(PROJECT_ROOT_DIRECTORY, "res")
 DATA_DIRECTORY = os.path.join(PROJECT_ROOT_DIRECTORY, "data")
 DOCUMENTATION_DIRECTORY = os.path.join(PROJECT_ROOT_DIRECTORY, "doc")
 
+SECRET_ENV = os.path.join(SOURCE_DIRECTORY, ".secrets.env")
+
 # source dataset paths
 PG_EXPERIMENT_PATH = os.path.join(DATA_DIRECTORY, "source/pg_dataset/")
 EXPERIMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "experiment.csv")
@@ -30,7 +32,10 @@ AUDIO_PATH = os.path.join(PG_EXPERIMENT_PATH, "recordings/")
 # │           └── {rec_id}.ogg
 # └── tones_with_label.xls
 
-COMMON_VOICE_PATH= os.path.join(PROJECT_ROOT_DIRECTORY, "../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/")
+COMMON_VOICE_PATH = os.path.join(
+    PROJECT_ROOT_DIRECTORY, "../../../Data/cv-corpus-20.0-2024-12-06/zh-CN/"
+)
 
-def fix_path(path:str) -> str:
-    return normpath(re.sub(r"/|\\", os.path.sep, path))
+
+def fix_path(path: str) -> str:
+    return normpath(re.sub(r"[\\/]", r"\\" if os.path.sep == "\\" else "/", path))
