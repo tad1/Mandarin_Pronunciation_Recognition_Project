@@ -55,9 +55,9 @@ def get_pg_experiment_dataset(extension=".ogg"):
         .then(
             pl.concat_str(
                 [
-                    pl.lit("stageII/"),
+                    pl.lit("stageII"+os.path.sep),
                     pl.col("id_student"),
-                    pl.lit("/"),
+                    pl.lit(os.path.sep),
                     pl.col("word_id"),
                     pl.lit(extension),
                 ]
@@ -66,9 +66,9 @@ def get_pg_experiment_dataset(extension=".ogg"):
         .otherwise(
             pl.concat_str(
                 [
-                    pl.lit("stageI/"),
+                    pl.lit("stageI"+os.path.sep),
                     pl.col("id_student"),
-                    pl.lit("/"),
+                    pl.lit(os.path.sep),
                     pl.col("word_id"),
                     pl.lit(extension),
                 ]
