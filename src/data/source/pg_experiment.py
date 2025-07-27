@@ -16,6 +16,7 @@ from path import PG_EXPERIMENT_PATH, fix_path
 
 EXPERIMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "experiment.csv")
 ASSESMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "assesment.csv")
+TONES_WITH_LABEL_XLS = os.path.join(PG_EXPERIMENT_PATH, "tones_with_label.xls")
 AUDIO_PATH = os.path.join(PG_EXPERIMENT_PATH, "recordings/")
 
 import polars as pl
@@ -38,7 +39,7 @@ def get_pg_experiment_dataset(extension=".ogg", verbose=False):
     df_assesment = pl.read_csv(ASSESMENT_CSV, null_values=["NULL"])
     df_assesment.drop("id_evaluator")
     excluded_rows = ["id_student"]
-    REGEX_EXPR = r"^([a-zA-Z]\d+)([tp])(\d*)$"
+    REGEX_EXPR = r"^\s*([a-zA-Z]\d+)([tp])(\d*)\s*$"
     df_assesment = (
         df_assesment.unpivot(index=excluded_rows, on=cs.exclude(excluded_rows))
         .drop_nulls()
@@ -88,8 +89,25 @@ def get_pg_experiment_dataset(extension=".ogg", verbose=False):
         .agg(pl.col("value").implode().alias("tone_assesment"))
         .with_columns(rec_pl_expr)
     )
+    
+    
+    df_tone_truth = pl.read_excel(
+        os.path.join(PG_EXPERIMENT_PATH, "tones_with_label.xls"),
+        sheet_name="tones_with_label",
+    )
+    
+    df_tone_truth = (df_tone_truth.with_columns(
+        [pl.col("word").str.extract(REGEX_EXPR, 1).alias("word_id"),]
+        ).sort(["word"])
+        .group_by("word_id")
+        .agg(pl.col("tone").implode().alias("target_tone"))
+    )
+    
     df_assesment_tone = df_assesment_tone.join(
         df_experiment, left_on="id_student", right_on="id"
+    )
+    df_assesment_tone = df_assesment_tone.join(
+        df_tone_truth, left_on="word_id", right_on="word_id"
     )
     df_assesment_pronunciation = (
         df_assesment.filter(pl.col("type") == "p")
