@@ -55,6 +55,9 @@ def get_pg_experiment_dataset(extension=".ogg"):
         .then(
             pl.concat_str(
                 [
+                    # adding AUDIO_PATH removes mess with paths up in code; at a cost of removing protability of dataframe
+                    #   we don't need portability, the generation code is portable
+                    pl.lit(AUDIO_PATH + os.path.sep),
                     pl.lit("stageII"+os.path.sep),
                     pl.col("id_student"),
                     pl.lit(os.path.sep),
@@ -66,6 +69,7 @@ def get_pg_experiment_dataset(extension=".ogg"):
         .otherwise(
             pl.concat_str(
                 [
+                    pl.lit(AUDIO_PATH + os.path.sep),
                     pl.lit("stageI"+os.path.sep),
                     pl.col("id_student"),
                     pl.lit(os.path.sep),
