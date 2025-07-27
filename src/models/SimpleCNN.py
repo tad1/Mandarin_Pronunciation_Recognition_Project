@@ -15,12 +15,10 @@ class PronunciationDataset(Dataset):
     def __init__(
         self,
         data: pl.DataFrame,
-        base_dir,
         sample_rate=PROJECT_SAMPLING_RATE,
         n_mels=128,
     ):
         self.data = data
-        self.base_dir = base_dir
         self.sample_rate = sample_rate
         self.n_mels = n_mels
         self.mel_spectrogram = T.MelSpectrogram(
@@ -38,10 +36,7 @@ class PronunciationDataset(Dataset):
         row = self.data.row(idx)
         rec_path = row[3]
         label = row[1]
-        full_path = os.path.normpath(os.path.join(self.base_dir, rec_path))
 
-        if not os.path.exists(full_path):
-            raise FileNotFoundError(f"Audio file not found: {full_path}")
 
         waveform = load_audio(full_path, return_type="torchaudio").reshape(1, -1)
 
