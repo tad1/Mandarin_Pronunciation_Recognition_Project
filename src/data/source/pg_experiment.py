@@ -35,6 +35,26 @@ def get_pg_experiment_dataset(extension=".ogg", verbose=False):
         .with_columns(pl.col("mother").str.to_lowercase().alias("mother"))
     )
     # Note, I'm not dropping nulls here, because there're `Invitation` results (88 of them) that don't have gender and mother
+    
+    # Clean values of L1 language (fixes spelling, whitespaces, and maps multilanguage to `multi`)
+    df_experiment = df_experiment.with_columns((
+        pl.col("mother")
+        .str.strip_chars()
+        .str.to_lowercase()
+        .str.replace_all(r"\s*/\s*", ", ")
+        .str.replace_all(r"\s*,\s*", ", ")
+        .map_elements(
+            lambda x: "multi" if "," in x else x,
+            return_dtype=pl.String
+        )
+        .map_elements(
+            lambda x: {
+                "belarusian": "belarussian",
+                "polski": "polish"
+            }.get(x, x),
+            return_dtype=pl.String
+        ))
+    )
 
     df_assesment = pl.read_csv(ASSESMENT_CSV, null_values=["NULL"])
     df_assesment.drop("id_evaluator")
@@ -81,13 +101,21 @@ def get_pg_experiment_dataset(extension=".ogg", verbose=False):
         )
         .alias("rec_path")
     )
+    
+    stage_pl_expr = (
+        pl.when(pl.col("word_id").str.starts_with("q"))
+        .then(pl.lit(2))
+        .otherwise(pl.lit(1))
+        .alias("stage")
+    )
+        
 
     df_assesment_tone = (
         df_assesment.filter(pl.col("type") == "t")
         .sort(["id_student", "variable"])
         .group_by(["id_student", "word_id"])
         .agg(pl.col("value").implode().alias("tone_assesment"))
-        .with_columns(rec_pl_expr)
+        .with_columns(rec_pl_expr, stage_pl_expr)
     )
     
     
@@ -112,7 +140,7 @@ def get_pg_experiment_dataset(extension=".ogg", verbose=False):
     df_assesment_pronunciation = (
         df_assesment.filter(pl.col("type") == "p")
         .drop("variable", "type")
-        .with_columns(rec_pl_expr)
+        .with_columns(rec_pl_expr, stage_pl_expr)
     )
     
     df_assesment_pronunciation = df_assesment_pronunciation.join(
