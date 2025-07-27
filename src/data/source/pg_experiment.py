@@ -1,5 +1,5 @@
 import os
-from path import PG_EXPERIMENT_PATH
+from path import PG_EXPERIMENT_PATH, fix_path
 
 # NOTE, this code is coupled with dataset filesystem structure:
 # PG_EXPERIMENT_PATH
@@ -23,7 +23,7 @@ import polars.selectors as cs
 
 
 # Note, this is fast enought; so I won't cache this
-def get_pg_experiment_dataset(extension=".ogg"):
+def get_pg_experiment_dataset(extension=".ogg", verbose=False):
     """_summary_
     Returns:
         _type_: `df_assesment_pronunciation`, `df_assesment_tone`
@@ -96,11 +96,29 @@ def get_pg_experiment_dataset(extension=".ogg"):
         .drop("variable", "type")
         .with_columns(rec_pl_expr)
     )
-
-    # TODO: check if recordings exists
+    
     df_assesment_pronunciation = df_assesment_pronunciation.join(
         df_experiment, left_on="id_student", right_on="id"
     )
+
+    def filter_existing_files(df: pl.DataFrame) -> pl.DataFrame:
+        """
+        More efficient version for large datasets.
+        """
+        paths = df["rec_path"].to_list()
+        mask = [os.path.exists(path) for path in paths]
+        
+        dropped = df.filter(~pl.Series(mask))
+        if dropped.height > 0:
+            print(f"get_pg_experiment_dataset(): WARNING, Dropped {dropped.height} rows with missing files")
+            if verbose:
+                print(dropped)
+        
+        return df.filter(pl.Series(mask))
+        
+
+    df_assesment_tone = filter_existing_files(df_assesment_tone)
+    df_assesment_pronunciation = filter_existing_files(df_assesment_pronunciation)
 
     return df_assesment_pronunciation, df_assesment_tone
 
