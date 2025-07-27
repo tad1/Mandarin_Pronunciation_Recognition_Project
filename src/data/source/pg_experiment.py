@@ -99,6 +99,7 @@ def get_pg_experiment_dataset(extension=".ogg", verbose=False):
                 ]
             )
         )
+        .map_elements(os.path.normpath)
         .alias("rec_path")
     )
     
