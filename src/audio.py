@@ -56,12 +56,12 @@ def load_audio_torchaudio(path: str) -> torch.Tensor:
     return audio.squeeze(0)
 
 if __name__ == "__main__":
-    from data.source.pg_experiment import AUDIO_PATH, get_pg_experiment_dataset
+    from data.source.pg_experiment import get_pg_experiment_dataset
     import os
     
     print("Loading audio file...")
     df_pronun, _ = get_pg_experiment_dataset()
-    files = [os.path.join(AUDIO_PATH, path.replace("/","\\")) for path in df_pronun["rec_path"]]
+    files = [os.path.join(path.replace("/","\\")) for path in df_pronun["rec_path"]]
     file = files[0]
     
     for i in range(10):
