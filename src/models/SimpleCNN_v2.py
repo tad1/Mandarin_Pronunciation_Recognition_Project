@@ -2,7 +2,7 @@ import torch
 import torchaudio
 import torchaudio.transforms as T
 from torch.utils.data import Dataset, DataLoader
-from audio import load_audio, PROJECT_SAMPLING_RATE
+from src.audio import load_audio, PROJECT_SAMPLING_RATE
 import polars as pl
 import os
 import torch.nn.functional as F
