@@ -24,7 +24,7 @@ import polars.selectors as cs
 
 
 # Note, this is fast enought; so I won't cache this
-def get_pg_experiment_dataset(extension=".ogg", verbose=False):
+def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
     """_summary_
     Returns:
         _type_: `df_assesment_pronunciation`, `df_assesment_tone`
@@ -172,6 +172,6 @@ def get_pg_experiment_dataset(extension=".ogg", verbose=False):
 
 if __name__ == "__main__":
     # Note, use `python -m data.pg_experiment` from `src/` directory to run this code 
-    a, b = get_pg_experiment_dataset()
+    a, b = get_pg_experiment_dataframe()
     print(a)
     print(b)
