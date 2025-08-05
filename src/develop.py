@@ -30,3 +30,25 @@ def reload_function(func):
         caller_locals[func_name] = getattr(module, func_name)
     
     return getattr(module, func_name)
+
+def reload(*args):
+    for arg in args:
+        if inspect.ismodule(arg):
+            importlib.reload(arg)
+        else:
+            module_name = arg.__module__
+            func_name = arg.__name__
+            
+            module = sys.modules.get(module_name)
+            if module:
+                module = importlib.reload(module)
+            
+            caller_frame = inspect.currentframe().f_back
+            caller_globals = caller_frame.f_globals
+            caller_locals = caller_frame.f_locals
+            
+            if func_name in caller_globals:
+                caller_globals[func_name] = getattr(module, func_name)
+            if func_name in caller_locals:
+                caller_locals[func_name] = getattr(module, func_name)
+            
