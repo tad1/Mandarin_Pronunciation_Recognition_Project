@@ -23,12 +23,11 @@ class Cast():
 class TorchDataset(torch.utils.data.Dataset):
     """Base class for PyTorch datasets that."""
     
-    def __init__(self, input: Cast, target : Cast):
-        assert len(input) == len(target), "Input and target must have the same length."
-        self.input = input
-        self.target = target
+    def __init__(self, *columns : Cast):
+        assert all(len(column) == len(columns[0]) for column in columns), "All columns must have the same length."
+        self.columns = columns
     def __len__(self):
-        return len(self.input)
+        return len(self.columns[0])
 
     def __getitem__(self, idx):
-        return self.input[idx], self.target[idx]
+        return (column[idx] for column in self.columns)

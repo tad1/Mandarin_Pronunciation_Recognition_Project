@@ -75,11 +75,11 @@ class PronunciationDataset(Dataset):
 
 
 def collate_fn(batch):
-    specs, labels = zip(*batch)
+    input, *specs, labels = zip(*batch)
     # Pad/truncate time dimension to max_len (e.g., 128 frames)
     max_len = 128
     padded_specs = []
-    for spec in specs:
+    for spec in input:
         # spec shape: [1, n_mels, time]
         if spec.shape[2] < max_len:
             pad_amount = max_len - spec.shape[2]
@@ -87,9 +87,11 @@ def collate_fn(batch):
         else:
             spec = spec[:, :, :max_len]
         padded_specs.append(spec)
-    specs_tensor = torch.stack(padded_specs)
-    labels_tensor = torch.tensor(labels)
-    return specs_tensor, labels_tensor
+    inputs_tensor = torch.stack(padded_specs)
+    specs_tensor = (torch.stack(specs) for specs in specs)
+    labels_tensor = torch.stack(labels)
+    
+    return inputs_tensor, *specs_tensor, labels_tensor
 
 
 class SimpleCNN(nn.Module):
@@ -121,14 +123,16 @@ def train(model, dataloader, optimizer, criterion, device):
     total_correct = 0
     total_samples = 0
 
-    for specs, labels in dataloader:
-        specs, labels = specs.to(device), labels.to(device)
+    for *specs, labels in dataloader:
+        specs = (spec.to(device) for spec in specs)
+        labels = labels.to(device)
+        
         optimizer.zero_grad()
-        outputs = model(specs)
+        outputs = model(*specs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-        total_loss += loss.item() * specs.size(0)
+        total_loss += loss.item() * labels.size(0)
 
         preds = (outputs >= 0.5).float()
         total_correct += (preds == labels).sum().item()
@@ -146,12 +150,13 @@ def evaluate(model, dataloader, criterion, device):
     total_samples = 0
 
     with torch.no_grad():
-        for specs, labels in dataloader:
-            specs, labels = specs.to(device), labels.to(device)
-            outputs = model(specs)
+        for *specs, labels in dataloader:
+            specs = (spec.to(device) for spec in specs)
+            labels = labels.to(device)
+            outputs = model(*specs)
             loss = criterion(outputs, labels)
 
-            total_loss += loss.item() * specs.size(0)
+            total_loss += loss.item() * labels.size(0)
 
             preds = (outputs >= 0.5).float()
             total_correct += (preds == labels).sum().item()
