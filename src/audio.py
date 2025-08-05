@@ -55,6 +55,15 @@ def load_audio_torchaudio(path: str) -> torch.Tensor:
             audio = audio.mean(dim=0, keepdim=True)
     return audio.squeeze(0)
 
+def play_audio_path(path: str):
+    from pydub import AudioSegment
+    from pydub.playback import play
+    from path import fix_path
+    
+    path = fix_path(path)
+    audio = AudioSegment.from_file(path)
+    play(audio)
+
 if __name__ == "__main__":
     from data.source.pg_experiment import get_pg_experiment_dataframe
     import os
