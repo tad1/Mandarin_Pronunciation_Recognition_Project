@@ -30,4 +30,4 @@ class TorchDataset(torch.utils.data.Dataset):
         return len(self.columns[0])
 
     def __getitem__(self, idx):
-        return (column[idx] for column in self.columns)
+        return tuple(column[idx] for column in self.columns)
