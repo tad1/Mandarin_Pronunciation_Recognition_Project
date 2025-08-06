@@ -62,24 +62,6 @@ class PronunciationDataset(Dataset):
         return log_mel_spec, torch.tensor(label, dtype=torch.float32)
 
 
-def collate_fn(batch):
-    specs, labels = zip(*batch)
-    # Pad/truncate time dimension to max_len (e.g., 128 frames)
-    max_len = 128
-    padded_specs = []
-    for spec in specs:
-        # spec shape: [1, n_mels, time]
-        if spec.shape[2] < max_len:
-            pad_amount = max_len - spec.shape[2]
-            spec = F.pad(spec, (0, pad_amount))
-        else:
-            spec = spec[:, :, :max_len]
-        padded_specs.append(spec)
-    specs_tensor = torch.stack(padded_specs)
-    labels_tensor = torch.tensor(labels)
-    return specs_tensor, labels_tensor
-
-
 class SimpleCNN(nn.Module):
     def __init__(self):
         super().__init__()
