@@ -6,34 +6,21 @@ from src.audio import load_audio, PROJECT_SAMPLING_RATE
 import polars as pl
 import os
 import torch.nn.functional as F
-from silero_vad import collect_chunks, load_silero_vad, get_speech_timestamps
 import torch.nn as nn
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
-def vad_detected(path) -> bool:
-    """Check if the audio file has speech segments using VAD."""
-    waveform = load_audio(path, return_type="torchaudio")
-    vad = load_silero_vad()
-    stamps = get_speech_timestamps(
-        waveform, vad, sampling_rate=PROJECT_SAMPLING_RATE
-    )
-    return len(stamps) > 0
 
 class PronunciationDataset(Dataset):
     def __init__(
         self,
         data: pl.DataFrame,
+        base_dir,
         sample_rate=PROJECT_SAMPLING_RATE,
         n_mels=128,
     ):
-    
-        # Cleaning with VAD
-        # filter_mask = pl.Series(
-        #     [vad_detected(os.path.join(base_dir, path)) for path in data["rec_path"].to_list()]
-        # )
-        # self.data = data.filter(filter_mask)
         self.data = data
+        self.base_dir = base_dir
         self.sample_rate = sample_rate
         self.n_mels = n_mels
         self.mel_spectrogram = T.MelSpectrogram(
@@ -43,7 +30,6 @@ class PronunciationDataset(Dataset):
             hop_length=512,
         )
         self.amplitude_to_db = T.AmplitudeToDB()
-        self.vad = load_silero_vad()
 
     def __len__(self):
         return self.data.height
@@ -52,18 +38,20 @@ class PronunciationDataset(Dataset):
         row = self.data.row(idx)
         rec_path = row[3]
         label = row[1]
+        full_path = os.path.normpath(os.path.join(self.base_dir, rec_path))
 
-        waveform = load_audio(rec_path, return_type="torchaudio")
-        stamps = get_speech_timestamps(
-            waveform, self.vad, sampling_rate=PROJECT_SAMPLING_RATE, min_speech_duration_ms=100
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"Audio file not found: {full_path}")
+
+        waveform = load_audio(full_path, return_type="torchaudio").reshape(1, -1)
+
+        # Voice Activity Detection
+        trimmed_waveform = torchaudio.functional.vad(
+            waveform, sample_rate=self.sample_rate
         )
-        trimmed_waveform = waveform
-        if len(stamps) != 0:
-            trimmed_waveform = collect_chunks(stamps, waveform)
-        else:
-            print(rec_path, "has no speech segments, using full waveform")
-        
-        trimmed_waveform = trimmed_waveform.reshape((1, -1))
+        if trimmed_waveform.numel() == 0:
+            trimmed_waveform = waveform  # fallback to original
+
         # Log-Mel features
         mel_spec = self.mel_spectrogram(trimmed_waveform)
         log_mel_spec = self.amplitude_to_db(mel_spec)
@@ -75,11 +63,11 @@ class PronunciationDataset(Dataset):
 
 
 def collate_fn(batch):
-    input, *specs, labels = zip(*batch)
+    specs, labels = zip(*batch)
     # Pad/truncate time dimension to max_len (e.g., 128 frames)
     max_len = 128
     padded_specs = []
-    for spec in input:
+    for spec in specs:
         # spec shape: [1, n_mels, time]
         if spec.shape[2] < max_len:
             pad_amount = max_len - spec.shape[2]
@@ -87,11 +75,9 @@ def collate_fn(batch):
         else:
             spec = spec[:, :, :max_len]
         padded_specs.append(spec)
-    inputs_tensor = torch.stack(padded_specs)
-    specs_tensor = (torch.stack(specs) for specs in specs)
-    labels_tensor = torch.stack(labels)
-    
-    return inputs_tensor, *specs_tensor, labels_tensor
+    specs_tensor = torch.stack(padded_specs)
+    labels_tensor = torch.tensor(labels)
+    return specs_tensor, labels_tensor
 
 
 class SimpleCNN(nn.Module):
@@ -101,16 +87,27 @@ class SimpleCNN(nn.Module):
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
-        self.dropout = nn.Dropout(0.3)
-        self.fc1 = nn.Linear(64 * 16 * 16, 128)  # adjust input size after pooling
+
+        # Add batch normalization
+        self.bn1 = nn.BatchNorm2d(16)
+        self.bn2 = nn.BatchNorm2d(32)
+        self.bn3 = nn.BatchNorm2d(64)
+
+        # Increase dropout rates
+        self.dropout1 = nn.Dropout2d(0.15)  # For conv layers
+        self.dropout2 = nn.Dropout(0.2)  # For fc layers
+        self.dropout3 = nn.Dropout(0.2)
+
+        self.fc1 = nn.Linear(64 * 16 * 16, 128)
         self.fc2 = nn.Linear(128, 1)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))  # [B,16,H/2,W/2]
-        x = self.pool(F.relu(self.conv2(x)))  # [B,32,H/4,W/4]
-        x = self.pool(F.relu(self.conv3(x)))  # [B,64,H/8,W/8]
+        x = self.dropout1(self.pool(F.relu(self.bn1(self.conv1(x)))))
+        x = self.dropout1(self.pool(F.relu(self.bn2(self.conv2(x)))))
+        x = self.dropout1(self.pool(F.relu(self.bn3(self.conv3(x)))))
         x = x.view(x.size(0), -1)
-        x = self.dropout(F.relu(self.fc1(x)))
+        x = self.dropout2(F.relu(self.fc1(x)))
+        x = self.dropout3(x)
         x = self.fc2(x)
         return torch.sigmoid(x).squeeze(1)
 
@@ -123,16 +120,14 @@ def train(model, dataloader, optimizer, criterion, device):
     total_correct = 0
     total_samples = 0
 
-    for *specs, labels in dataloader:
-        specs = (spec.to(device) for spec in specs)
-        labels = labels.to(device)
-        
+    for specs, labels in dataloader:
+        specs, labels = specs.to(device), labels.to(device)
         optimizer.zero_grad()
-        outputs = model(*specs)
+        outputs = model(specs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-        total_loss += loss.item() * labels.size(0)
+        total_loss += loss.item() * specs.size(0)
 
         preds = (outputs >= 0.5).float()
         total_correct += (preds == labels).sum().item()
@@ -150,13 +145,12 @@ def evaluate(model, dataloader, criterion, device):
     total_samples = 0
 
     with torch.no_grad():
-        for *specs, labels in dataloader:
-            specs = (spec.to(device) for spec in specs)
-            labels = labels.to(device)
-            outputs = model(*specs)
+        for specs, labels in dataloader:
+            specs, labels = specs.to(device), labels.to(device)
+            outputs = model(specs)
             loss = criterion(outputs, labels)
 
-            total_loss += loss.item() * labels.size(0)
+            total_loss += loss.item() * specs.size(0)
 
             preds = (outputs >= 0.5).float()
             total_correct += (preds == labels).sum().item()
