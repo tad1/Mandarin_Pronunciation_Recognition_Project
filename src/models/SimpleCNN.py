@@ -6,21 +6,34 @@ from src.audio import load_audio, PROJECT_SAMPLING_RATE
 import polars as pl
 import os
 import torch.nn.functional as F
+from silero_vad import collect_chunks, load_silero_vad, get_speech_timestamps
 import torch.nn as nn
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
+def vad_detected(path) -> bool:
+    """Check if the audio file has speech segments using VAD."""
+    waveform = load_audio(path, return_type="torchaudio")
+    vad = load_silero_vad()
+    stamps = get_speech_timestamps(
+        waveform, vad, sampling_rate=PROJECT_SAMPLING_RATE
+    )
+    return len(stamps) > 0
 
 class PronunciationDataset(Dataset):
     def __init__(
         self,
         data: pl.DataFrame,
-        base_dir,
         sample_rate=PROJECT_SAMPLING_RATE,
         n_mels=128,
     ):
+    
+        # Cleaning with VAD
+        # filter_mask = pl.Series(
+        #     [vad_detected(os.path.join(base_dir, path)) for path in data["rec_path"].to_list()]
+        # )
+        # self.data = data.filter(filter_mask)
         self.data = data
-        self.base_dir = base_dir
         self.sample_rate = sample_rate
         self.n_mels = n_mels
         self.mel_spectrogram = T.MelSpectrogram(
@@ -30,6 +43,7 @@ class PronunciationDataset(Dataset):
             hop_length=512,
         )
         self.amplitude_to_db = T.AmplitudeToDB()
+        self.vad = load_silero_vad()
 
     def __len__(self):
         return self.data.height
@@ -38,20 +52,18 @@ class PronunciationDataset(Dataset):
         row = self.data.row(idx)
         rec_path = row[3]
         label = row[1]
-        full_path = os.path.normpath(os.path.join(self.base_dir, rec_path))
 
-        if not os.path.exists(full_path):
-            raise FileNotFoundError(f"Audio file not found: {full_path}")
-
-        waveform = load_audio(full_path, return_type="torchaudio").reshape(1, -1)
-
-        # Voice Activity Detection
-        trimmed_waveform = torchaudio.functional.vad(
-            waveform, sample_rate=self.sample_rate
+        waveform = load_audio(rec_path, return_type="torchaudio")
+        stamps = get_speech_timestamps(
+            waveform, self.vad, sampling_rate=PROJECT_SAMPLING_RATE, min_speech_duration_ms=100
         )
-        if trimmed_waveform.numel() == 0:
-            trimmed_waveform = waveform  # fallback to original
-
+        trimmed_waveform = waveform
+        if len(stamps) != 0:
+            trimmed_waveform = collect_chunks(stamps, waveform)
+        else:
+            print(rec_path, "has no speech segments, using full waveform")
+        
+        trimmed_waveform = trimmed_waveform.reshape((1, -1))
         # Log-Mel features
         mel_spec = self.mel_spectrogram(trimmed_waveform)
         log_mel_spec = self.amplitude_to_db(mel_spec)
@@ -60,24 +72,6 @@ class PronunciationDataset(Dataset):
         )
 
         return log_mel_spec, torch.tensor(label, dtype=torch.float32)
-
-
-def collate_fn(batch):
-    specs, labels = zip(*batch)
-    # Pad/truncate time dimension to max_len (e.g., 128 frames)
-    max_len = 128
-    padded_specs = []
-    for spec in specs:
-        # spec shape: [1, n_mels, time]
-        if spec.shape[2] < max_len:
-            pad_amount = max_len - spec.shape[2]
-            spec = F.pad(spec, (0, pad_amount))
-        else:
-            spec = spec[:, :, :max_len]
-        padded_specs.append(spec)
-    specs_tensor = torch.stack(padded_specs)
-    labels_tensor = torch.tensor(labels)
-    return specs_tensor, labels_tensor
 
 
 class SimpleCNN(nn.Module):
@@ -109,14 +103,16 @@ def train(model, dataloader, optimizer, criterion, device):
     total_correct = 0
     total_samples = 0
 
-    for specs, labels in dataloader:
-        specs, labels = specs.to(device), labels.to(device)
+    for *specs, labels in dataloader:
+        specs = (spec.to(device) for spec in specs)
+        labels = labels.to(device)
+        
         optimizer.zero_grad()
-        outputs = model(specs)
+        outputs = model(*specs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-        total_loss += loss.item() * specs.size(0)
+        total_loss += loss.item() * labels.size(0)
 
         preds = (outputs >= 0.5).float()
         total_correct += (preds == labels).sum().item()
@@ -134,12 +130,13 @@ def evaluate(model, dataloader, criterion, device):
     total_samples = 0
 
     with torch.no_grad():
-        for specs, labels in dataloader:
-            specs, labels = specs.to(device), labels.to(device)
-            outputs = model(specs)
+        for *specs, labels in dataloader:
+            specs = (spec.to(device) for spec in specs)
+            labels = labels.to(device)
+            outputs = model(*specs)
             loss = criterion(outputs, labels)
 
-            total_loss += loss.item() * specs.size(0)
+            total_loss += loss.item() * labels.size(0)
 
             preds = (outputs >= 0.5).float()
             total_correct += (preds == labels).sum().item()
