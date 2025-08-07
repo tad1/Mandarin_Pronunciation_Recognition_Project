@@ -7,6 +7,13 @@ class DefaultCollate():
     def __call__(self, batch):
         return torch.utils.data.default_collate(batch)
 
+class ReshapeCollate(DefaultCollate):
+    def __init__(self, shape: tuple):
+        self.shape = shape
+
+    def __call__(self, batch):
+        return torch.utils.data.default_collate(batch).reshape(self.shape)
+
 class PaddingCollate(DefaultCollate):
     def __init__(self, mode: Literal["SET_MAX_LEN"], max_len: int, pad_dim: int = 2, pad_value: Union[int, float] = 0):
         self.pad_value = pad_value
@@ -21,7 +28,8 @@ class PaddingCollate(DefaultCollate):
                 pad_amount = self.max_len - size
                 tensor = torch.nn.functional.pad(tensor, (0, pad_amount))
             else:
-                tensor = tensor[:, :, :self.max_len]
+                tensor: torch.Tensor = tensor
+                tensor = tensor.narrow(self.pad_dim, 0, self.max_len)
             res.append(tensor)
         return torch.stack(res)
 

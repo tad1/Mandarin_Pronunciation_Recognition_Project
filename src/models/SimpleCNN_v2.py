@@ -102,14 +102,15 @@ def train(model, dataloader, optimizer, criterion, device):
     total_correct = 0
     total_samples = 0
 
-    for specs, labels in dataloader:
-        specs, labels = specs.to(device), labels.to(device)
+    for *specs, labels in dataloader:
+        specs = (spec.to(device) for spec in specs)
+        labels = labels.to(device)
         optimizer.zero_grad()
-        outputs = model(specs)
+        outputs = model(*specs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-        total_loss += loss.item() * specs.size(0)
+        total_loss += loss.item() * labels.size(0)
 
         preds = (outputs >= 0.5).float()
         total_correct += (preds == labels).sum().item()
