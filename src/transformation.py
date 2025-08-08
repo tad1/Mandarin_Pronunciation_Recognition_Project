@@ -60,7 +60,35 @@ class Channels():
         res.mode = self.mode
         res.input_mode = self.input_mode
         return res
-        
+    
+class RMSEnergy():
+    def __init__(self, frame_length=1024, hop_length=512):
+        self.frame_length = frame_length
+        self.hop_length = hop_length
+
+    def __call__(self, path):
+        waveform = load_audio(path, return_type="torchaudio").numpy()
+        rms = librosa.feature.rms(
+            y=waveform,
+            frame_length=self.frame_length,
+            hop_length=self.hop_length,
+        )
+        return torch.tensor(rms, dtype=torch.float32)
+
+class ZeroCrossingRate():
+    def __init__(self, frame_length=1024, hop_length=512):
+        self.frame_length = frame_length
+        self.hop_length = hop_length
+
+    def __call__(self, path):
+        waveform = load_audio(path, return_type="torchaudio").numpy()
+        zcr = librosa.feature.zero_crossing_rate(
+            y=waveform,
+            frame_length=self.frame_length,
+            hop_length=self.hop_length,
+        )
+        return torch.tensor(zcr, dtype=torch.float32)
+
 class _Channels():
     mode: Literal["stack", "cat"]
     input_mode: Literal["one-to-one", "multiply"]
@@ -172,12 +200,17 @@ class TorchVadMFCC():
 if __name__ == "__main__":
     # Example usage
     from data.source.pg_experiment import get_pg_experiment_dataframe
-    from matplotlib import pyplot as plt
+    from audio import load_audio
     pron, _ = get_pg_experiment_dataframe()
     
     transformation = Channels(merge_mode="stack", input_mode="multiply")(
         TorchVadMFCC(delta=1),
-        TorchVadMFCC(delta=0)
+        TorchVadMFCC(delta=0),
+    )
+    
+    transformation2 = Channels(merge_mode="stack", input_mode="multiply")(
+        ZeroCrossingRate(),
+        RMSEnergy(),
     )
 
     audio_path = pron[0]["rec_path"].to_list()[0]
@@ -185,9 +218,25 @@ if __name__ == "__main__":
     print(trans.shape)
     delta1, mfcc = trans.unbind()
     print(delta1.shape, mfcc.shape)
-    librosa.display.specshow(delta1.numpy(), sr=PROJECT_SAMPLING_RATE, x_axis='time', y_axis='mel')
-    plt.show()
-    plt.figure()
-    librosa.display.specshow(mfcc.numpy(), sr=PROJECT_SAMPLING_RATE, x_axis='time', y_axis='mel')
-    plt.show()
+    
+    trans2 = transformation2(audio_path)
+    print(trans2.shape)
+    zcr, rms = trans2.unbind()
+    print(zcr.shape, rms.shape)
+    
+    # rms = librosa.feature.rms(y=audio, frame_length=1024, hop_length=512)
+    # print(rms.shape)
+    # # Visualize the results
+    # times = librosa.times_like(rms, sr=PROJECT_SAMPLING_RATE, hop_length=512)
+    # plt.plot(times, rms[0])
+    # plt.title("Root Mean Square Energy")
+    # plt.xlabel("Time (seconds)")
+    # plt.ylabel("RMS Energy")
+    # plt.show()
+    
+    # librosa.display.specshow(delta1.numpy(), sr=PROJECT_SAMPLING_RATE, x_axis='time', y_axis='mel')
+    # plt.show()
+    # plt.figure()
+    # librosa.display.specshow(mfcc.numpy(), sr=PROJECT_SAMPLING_RATE, x_axis='time', y_axis='mel')
+    # plt.show()
     

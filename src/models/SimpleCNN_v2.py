@@ -128,12 +128,13 @@ def evaluate(model, dataloader, criterion, device):
     total_samples = 0
 
     with torch.no_grad():
-        for specs, labels in dataloader:
-            specs, labels = specs.to(device), labels.to(device)
-            outputs = model(specs)
+        for *specs, labels in dataloader:
+            specs = (spec.to(device) for spec in specs)
+            labels = labels.to(device)
+            outputs = model(*specs)
             loss = criterion(outputs, labels)
 
-            total_loss += loss.item() * specs.size(0)
+            total_loss += loss.item() * labels.size(0)
 
             preds = (outputs >= 0.5).float()
             total_correct += (preds == labels).sum().item()
