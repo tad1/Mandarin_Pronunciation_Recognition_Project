@@ -1,12 +1,14 @@
+import os
+
+import polars as pl
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import torchaudio
 import torchaudio.transforms as T
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
+
 from src.audio import load_audio, PROJECT_SAMPLING_RATE
-import polars as pl
-import os
-import torch.nn.functional as F
-import torch.nn as nn
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -30,6 +32,10 @@ class PronunciationDataset(Dataset):
             hop_length=512,
         )
         self.amplitude_to_db = T.AmplitudeToDB()
+        self.spec_augment = nn.Sequential(
+            T.TimeMasking(time_mask_param=30),
+            T.FrequencyMasking(freq_mask_param=13)
+        )
 
     def __len__(self):
         return self.data.height
@@ -58,6 +64,10 @@ class PronunciationDataset(Dataset):
         log_mel_spec = (log_mel_spec - log_mel_spec.mean()) / (
             log_mel_spec.std() + 1e-6
         )
+
+        # Apply SpecAugment during training only
+        if self.training:
+            log_mel_spec = self.spec_augment(log_mel_spec)
 
         return log_mel_spec, torch.tensor(label, dtype=torch.float32)
 

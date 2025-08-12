@@ -1,5 +1,6 @@
 import os
-from path import PG_EXPERIMENT_PATH
+
+from src.path import PG_EXPERIMENT_PATH
 
 # NOTE, this code is coupled with dataset filesystem structure:
 # PG_EXPERIMENT_PATH
