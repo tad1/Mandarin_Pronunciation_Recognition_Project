@@ -1,5 +1,6 @@
 import os
-from path import PG_EXPERIMENT_PATH, fix_path
+
+from src.path import PG_EXPERIMENT_PATH
 
 # NOTE, this code is coupled with dataset filesystem structure:
 # PG_EXPERIMENT_PATH
@@ -16,25 +17,27 @@ from path import PG_EXPERIMENT_PATH, fix_path
 
 EXPERIMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "experiment.csv")
 ASSESMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "assesment.csv")
+ASSESMENT_CSV_NEW = os.path.join(PG_EXPERIMENT_PATH, "new_assesment.csv")
 TONES_WITH_LABEL_XLS = os.path.join(PG_EXPERIMENT_PATH, "tones_with_label.xls")
 AUDIO_PATH = os.path.join(PG_EXPERIMENT_PATH, "recordings/")
+AUDIO_PATH_NEW = os.path.join(PG_EXPERIMENT_PATH, "new_recordings/")
 
 import polars as pl
 import polars.selectors as cs
 
 
-# Note, this is fast enought; so I won't cache this
-def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
+# Note, this is fast enough; so I won't cache this
+def get_pg_experiment_dataframe(extension=".ogg", verbose=False, newVersion=False):
     """_summary_
     Returns:
-        _type_: `df_assesment_pronunciation`, `df_assesment_tone`
+        _type_: `df_assessment_pronunciation`, `df_assessment_tone`
     """
     df_experiment = (
         pl.read_csv(EXPERIMENT_CSV, null_values=["NULL"])
         .select(["id", "univ", "gender", "mother"])
         .with_columns(pl.col("mother").str.to_lowercase().alias("mother"))
     )
-    # Note, I'm not dropping nulls here, because there're `Invitation` results (88 of them) that don't have gender and mother
+    # Note, I'm not dropping nulls here, because there are `Invitation` results (88 of them) that don't have a gender and mother
     
     # Clean values of L1 language (fixes spelling, whitespaces, and maps multilanguage to `multi`)
     df_experiment = df_experiment.with_columns((
@@ -56,12 +59,12 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
         ))
     )
 
-    df_assesment = pl.read_csv(ASSESMENT_CSV, null_values=["NULL"])
-    df_assesment.drop("id_evaluator")
-    excluded_rows = ["id_student"]
+    df_assessment = pl.read_csv(ASSESMENT_CSV_NEW if newVersion else ASSESMENT_CSV, null_values=["NULL"])
+    if not newVersion: df_assessment.drop("id_evaluator")
+    excluded_rows = ["id" if newVersion else "id_student"]
     REGEX_EXPR = r"^\s*([a-zA-Z]\d+)([tp])(\d*)\s*$"
-    df_assesment = (
-        df_assesment.unpivot(index=excluded_rows, on=cs.exclude(excluded_rows))
+    df_assessment = (
+        df_assessment.unpivot(index=excluded_rows, on=cs.exclude(excluded_rows))
         .drop_nulls()
         .with_columns(
             [
@@ -78,9 +81,9 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
                 [
                     # adding AUDIO_PATH removes mess with paths up in code; at a cost of removing protability of dataframe
                     #   we don't need portability, the generation code is portable
-                    pl.lit(AUDIO_PATH + os.path.sep),
+                    pl.lit(AUDIO_PATH_NEW if newVersion else AUDIO_PATH + os.path.sep),
                     pl.lit("stageII"+os.path.sep),
-                    pl.col("id_student"),
+                    pl.col("id" if newVersion else "id_student"),
                     pl.lit(os.path.sep),
                     pl.col("word_id"),
                     pl.lit(extension),
@@ -90,16 +93,16 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
         .otherwise(
             pl.concat_str(
                 [
-                    pl.lit(AUDIO_PATH + os.path.sep),
+                    pl.lit(AUDIO_PATH_NEW if newVersion else AUDIO_PATH + os.path.sep),
                     pl.lit("stageI"+os.path.sep),
-                    pl.col("id_student"),
+                    pl.col("id" if newVersion else "id_student"),
                     pl.lit(os.path.sep),
                     pl.col("word_id"),
                     pl.lit(extension),
                 ]
             )
         )
-        .map_elements(os.path.normpath)
+        .map_elements(os.path.normpath, return_dtype=pl.Utf8)
         .alias("rec_path")
     )
     
@@ -109,12 +112,11 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
         .otherwise(pl.lit(1))
         .alias("stage")
     )
-        
 
-    df_assesment_tone = (
-        df_assesment.filter(pl.col("type") == "t")
-        .sort(["id_student", "variable"])
-        .group_by(["id_student", "word_id"])
+    df_assessment_tone = (
+        df_assessment.filter(pl.col("type") == "t")
+        .sort(["id" if newVersion else "id_student", "variable"])
+        .group_by(["id" if newVersion else "id_student", "word_id"])
         .agg(pl.col("value").implode().alias("tone_assesment"))
         .with_columns(rec_pl_expr, stage_pl_expr)
     )
@@ -131,21 +133,21 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
         .group_by("word_id")
         .agg(pl.col("tone").implode().alias("target_tone"))
     )
-    
-    df_assesment_tone = df_assesment_tone.join(
-        df_experiment, left_on="id_student", right_on="id"
+
+    df_assessment_tone = df_assessment_tone.join(
+        df_experiment, left_on="id" if newVersion else "id_student", right_on="id"
     )
-    df_assesment_tone = df_assesment_tone.join(
+    df_assessment_tone = df_assessment_tone.join(
         df_tone_truth, left_on="word_id", right_on="word_id"
     )
-    df_assesment_pronunciation = (
-        df_assesment.filter(pl.col("type") == "p")
+    df_assessment_pronunciation = (
+        df_assessment.filter(pl.col("type") == "p")
         .drop("variable", "type")
         .with_columns(rec_pl_expr, stage_pl_expr)
     )
-    
-    df_assesment_pronunciation = df_assesment_pronunciation.join(
-        df_experiment, left_on="id_student", right_on="id"
+
+    df_assessment_pronunciation = df_assessment_pronunciation.join(
+        df_experiment, left_on="id" if newVersion else "id_student", right_on="id"
     )
 
     def filter_existing_files(df: pl.DataFrame) -> pl.DataFrame:
@@ -162,12 +164,11 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
                 print(dropped)
         
         return df.filter(pl.Series(mask))
-        
 
-    df_assesment_tone = filter_existing_files(df_assesment_tone)
-    df_assesment_pronunciation = filter_existing_files(df_assesment_pronunciation)
+    df_assessment_tone = filter_existing_files(df_assessment_tone)
+    df_assessment_pronunciation = filter_existing_files(df_assessment_pronunciation)
 
-    return df_assesment_pronunciation, df_assesment_tone
+    return df_assessment_pronunciation, df_assessment_tone
 
 
 if __name__ == "__main__":
