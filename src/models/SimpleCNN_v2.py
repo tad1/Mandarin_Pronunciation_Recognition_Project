@@ -112,7 +112,8 @@ def train(model, dataloader, optimizer, criterion, device):
         optimizer.step()
         total_loss += loss.item() * labels.size(0)
 
-        preds = (outputs >= 0.5).float()
+        preds = torch.argmax(outputs, dim=1)
+        labels = torch.argmax(labels, dim=1)
         total_correct += (preds == labels).sum().item()
         total_samples += labels.size(0)
 
@@ -136,7 +137,8 @@ def evaluate(model, dataloader, criterion, device):
 
             total_loss += loss.item() * labels.size(0)
 
-            preds = (outputs >= 0.5).float()
+            preds = torch.argmax(outputs, dim=1)
+            labels = torch.argmax(labels, dim=1)
             total_correct += (preds == labels).sum().item()
             total_samples += labels.size(0)
 

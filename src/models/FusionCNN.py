@@ -144,10 +144,7 @@ class ContextFusionCNN(nn.Module):
             nn.Linear(96+64+16, 32),
             nn.ReLU(),
             nn.Dropout(dropout_rate),
-            nn.Linear(32,16),
-            nn.ReLU(),
-            nn.Dropout(dropout_rate),
-            nn.Linear(16, num_classes)
+            nn.Linear(32, num_classes)
         )
 
     def forward(self, x_2d, x_1d, x_word):
