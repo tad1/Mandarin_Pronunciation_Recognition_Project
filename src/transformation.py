@@ -1,6 +1,5 @@
 
 from typing import Literal
-from pytools import delta
 import torchaudio.transforms as T
 from silero_vad import collect_chunks, load_silero_vad, get_speech_timestamps
 from audio import load_audio, PROJECT_SAMPLING_RATE
@@ -88,6 +87,18 @@ class ZeroCrossingRate():
             hop_length=self.hop_length,
         )
         return torch.tensor(zcr, dtype=torch.float32)
+
+class FundamentalFrequency():
+    def __call__(self, path):
+        waveform = load_audio(path, return_type="torchaudio").numpy()
+        f0 = librosa.yin(
+            y=waveform,
+            fmin=librosa.note_to_hz('C2'),
+            fmax=librosa.note_to_hz('C7'),
+            sr=PROJECT_SAMPLING_RATE
+        )
+        return torch.tensor(f0, dtype=torch.float32).reshape((1, -1))
+    
 
 class _Channels():
     mode: Literal["stack", "cat"]
