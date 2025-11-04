@@ -65,7 +65,7 @@ class PronunciationDataset(Dataset):
 class SimpleCNN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
@@ -80,7 +80,7 @@ class SimpleCNN(nn.Module):
         self.dropout2 = nn.Dropout(0.2)  # For fc layers
         self.dropout3 = nn.Dropout(0.2)
 
-        self.fc1 = nn.Linear(64 * 16 * 16, 128)
+        self.fc1 = nn.Linear(2240, 128)
         self.fc2 = nn.Linear(128, 1)
 
     def forward(self, x):
@@ -112,7 +112,8 @@ def train(model, dataloader, optimizer, criterion, device):
         optimizer.step()
         total_loss += loss.item() * labels.size(0)
 
-        preds = (outputs >= 0.5).float()
+        preds = torch.argmax(outputs, dim=1)
+        labels = torch.argmax(labels, dim=1)
         total_correct += (preds == labels).sum().item()
         total_samples += labels.size(0)
 
@@ -128,14 +129,16 @@ def evaluate(model, dataloader, criterion, device):
     total_samples = 0
 
     with torch.no_grad():
-        for specs, labels in dataloader:
-            specs, labels = specs.to(device), labels.to(device)
-            outputs = model(specs)
+        for *specs, labels in dataloader:
+            specs = (spec.to(device) for spec in specs)
+            labels = labels.to(device)
+            outputs = model(*specs)
             loss = criterion(outputs, labels)
 
-            total_loss += loss.item() * specs.size(0)
+            total_loss += loss.item() * labels.size(0)
 
-            preds = (outputs >= 0.5).float()
+            preds = torch.argmax(outputs, dim=1)
+            labels = torch.argmax(labels, dim=1)
             total_correct += (preds == labels).sum().item()
             total_samples += labels.size(0)
 
