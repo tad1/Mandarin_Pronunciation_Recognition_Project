@@ -1,6 +1,5 @@
 
 from typing import Literal
-from pytools import delta
 import torchaudio.transforms as T
 from silero_vad import collect_chunks, load_silero_vad, get_speech_timestamps
 from audio import load_audio, PROJECT_SAMPLING_RATE

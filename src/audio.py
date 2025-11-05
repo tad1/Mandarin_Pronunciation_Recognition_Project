@@ -4,6 +4,7 @@
 from __future__ import annotations
 from typing import Literal, overload, TYPE_CHECKING
 from path import fix_path
+from os import name as system_name
 
 if TYPE_CHECKING:
     import torch
@@ -45,6 +46,16 @@ def load_audio_librosa(path: str) -> numpy.ndarray:
     return audio
 
 def load_audio_torchaudio(path: str) -> torch.Tensor:
+    if system_name == "nt":
+        # PyTorch decided to drop support other backends like FFmpeg, or soundfile
+        # the only backend in torchaudio is TorchCodec, it's a wrapper for FFmpeg
+        # TorchCodec 0.8 is experimental on Windows and it's requires conda and manually injecting DLL paths
+        # conversion numpy->pytorch is a more stable approach
+        import torch
+        audio = load_audio_librosa(path)
+        audio = torch.tensor(audio)
+        return audio
+    
     from torchaudio import load
     from torchaudio.functional import resample
 

@@ -19,7 +19,7 @@ dependencies = [
     "soundfile>=0.13.1",
     "torch>=2.9.0",
     "torchaudio>=2.9.0",
-    "torchcodec>=0.8.1",
+    "torchcodec>=0.8.1 ; sys_platform == 'linux'",
     "torchvision>=0.24.0",
     "transformers>=4.57.1",
     "wandb>=0.22.3",
