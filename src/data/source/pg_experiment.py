@@ -1,9 +1,11 @@
 import os
+from typing import Literal
 from path import PG_EXPERIMENT_PATH, fix_path
 
 # NOTE, this code is coupled with dataset filesystem structure:
 # PG_EXPERIMENT_PATH
 # ├── assesment.csv
+# ├── assesment_round2.csv
 # ├── experiment.csv
 # ├── recordings
 # │   ├── stageI
@@ -16,6 +18,7 @@ from path import PG_EXPERIMENT_PATH, fix_path
 
 EXPERIMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "experiment.csv")
 ASSESMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "assesment.csv")
+ASSESMENT_V2_CSV = os.path.join(PG_EXPERIMENT_PATH, "assesment_round2.csv")
 TONES_WITH_LABEL_XLS = os.path.join(PG_EXPERIMENT_PATH, "tones_with_label.xls")
 AUDIO_PATH = os.path.join(PG_EXPERIMENT_PATH, "recordings/")
 
@@ -24,7 +27,7 @@ import polars.selectors as cs
 
 
 # Note, this is fast enought; so I won't cache this
-def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
+def get_pg_experiment_dataframe(extension=".ogg", verbose=False, assesment_version:Literal["v1","v2"]="v2"):
     """_summary_
     Returns:
         _type_: `df_assesment_pronunciation`, `df_assesment_tone`
@@ -56,8 +59,10 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False):
         ))
     )
 
-    df_assesment = pl.read_csv(ASSESMENT_CSV, null_values=["NULL"])
-    df_assesment.drop("id_evaluator")
+    assesment_file = ASSESMENT_CSV if assesment_version == "v1" else ASSESMENT_V2_CSV
+    df_assesment = pl.read_csv(assesment_file, null_values=["NULL"])
+    df_assesment = df_assesment.drop("id_evaluator", strict=False)
+    df_assesment = df_assesment.rename({"id": "id_student"}, strict=False)
     excluded_rows = ["id_student"]
     REGEX_EXPR = r"^\s*([a-zA-Z]\d+)([tp])(\d*)\s*$"
     df_assesment = (
