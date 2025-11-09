@@ -62,6 +62,7 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False, assesment_versi
     assesment_file = ASSESMENT_CSV if assesment_version == "v1" else ASSESMENT_V2_CSV
     df_assesment = pl.read_csv(assesment_file, null_values=["NULL"])
     df_assesment = df_assesment.drop("id_evaluator", strict=False)
+    df_assesment = df_assesment.drop("gender", strict=False)
     df_assesment = df_assesment.rename({"id": "id_student"}, strict=False)
     excluded_rows = ["id_student"]
     REGEX_EXPR = r"^\s*([a-zA-Z]\d+)([tp])(\d*)\s*$"
@@ -75,7 +76,6 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False, assesment_versi
             ]
         )
     )
-
     rec_pl_expr = (
         pl.when(pl.col("word_id").str.starts_with("q"))
         .then(
