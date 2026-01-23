@@ -76,6 +76,7 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False, assesment_versi
             ]
         )
     )
+    df_assesment = df_assesment.with_columns(pl.col("value").cast(pl.Int64))
     rec_pl_expr = (
         pl.when(pl.col("word_id").str.starts_with("q"))
         .then(
