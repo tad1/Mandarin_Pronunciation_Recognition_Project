@@ -4,6 +4,7 @@ import torchaudio
 import torchaudio.transforms as T
 from torch.utils.data import Dataset, DataLoader
 from audio import load_audio, PROJECT_SAMPLING_RATE
+import random
 import polars as pl
 import os
 import torch.nn.functional as F
@@ -99,7 +100,7 @@ class SimpleCNN(nn.Module):
     # Training loop
 
 
-def train(model, dataloader, optimizer, criterion, device, label_version: Literal["v1", "v2"]=LABEL_VERSION, interleave_labels=False):
+def train(model, dataloader, optimizer, criterion, device, zero_model=False):
     model.train()
     total_loss = 0
     total_correct = 0
@@ -107,8 +108,9 @@ def train(model, dataloader, optimizer, criterion, device, label_version: Litera
 
     for *specs, labelsv1, labelsv2 in dataloader:
         specs = (spec.to(device) for spec in specs)
-        if(interleave_labels):
-            label_version = "v1" if label_version == "v2" else "v2"
+        label_version = random.choice(["v1", "v2"])
+        if zero_model:
+            label_version = "v2"
         labels = labelsv1 if label_version == "v1" else labelsv2
         labels = labels.to(device)
         
@@ -128,18 +130,16 @@ def train(model, dataloader, optimizer, criterion, device, label_version: Litera
     return avg_loss, accuracy
 
 
-def evaluate(model, dataloader, criterion, device, label_version: Literal["v1", "v2"]=LABEL_VERSION, interleave_labels=False):
+def evaluate(model, dataloader, criterion, device):
     model.eval()
     total_loss = 0
     total_correct = 0
     total_samples = 0
 
     with torch.no_grad():
-        for *specs, labelsv1, labelsv2 in dataloader:
+        for *specs, _, labelsv2 in dataloader:
             specs = (spec.to(device) for spec in specs)
-            if(interleave_labels):
-                label_version = "v1" if label_version == "v2" else "v2"
-            labels = labelsv1 if label_version == "v1" else labelsv2
+            labels = labelsv2
             labels = labels.to(device)
             outputs = model(*specs)
             loss = criterion(outputs, labels)
