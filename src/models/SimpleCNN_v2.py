@@ -1,3 +1,4 @@
+from typing import Literal
 import torch
 import torchaudio
 import torchaudio.transforms as T
@@ -7,6 +8,8 @@ import polars as pl
 import os
 import torch.nn.functional as F
 import torch.nn as nn
+
+from data.source.pg_experiment import LABEL_VERSION
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -96,15 +99,19 @@ class SimpleCNN(nn.Module):
     # Training loop
 
 
-def train(model, dataloader, optimizer, criterion, device):
+def train(model, dataloader, optimizer, criterion, device, label_version: Literal["v1", "v2"]=LABEL_VERSION, interleave_labels=False):
     model.train()
     total_loss = 0
     total_correct = 0
     total_samples = 0
 
-    for *specs, labels in dataloader:
+    for *specs, labelsv1, labelsv2 in dataloader:
         specs = (spec.to(device) for spec in specs)
+        if(interleave_labels):
+            label_version = "v1" if label_version == "v2" else "v2"
+        labels = labelsv1 if label_version == "v1" else labelsv2
         labels = labels.to(device)
+        
         optimizer.zero_grad()
         outputs = model(*specs)
         loss = criterion(outputs, labels)
@@ -121,15 +128,18 @@ def train(model, dataloader, optimizer, criterion, device):
     return avg_loss, accuracy
 
 
-def evaluate(model, dataloader, criterion, device):
+def evaluate(model, dataloader, criterion, device, label_version: Literal["v1", "v2"]=LABEL_VERSION, interleave_labels=False):
     model.eval()
     total_loss = 0
     total_correct = 0
     total_samples = 0
 
     with torch.no_grad():
-        for *specs, labels in dataloader:
+        for *specs, labelsv1, labelsv2 in dataloader:
             specs = (spec.to(device) for spec in specs)
+            if(interleave_labels):
+                label_version = "v1" if label_version == "v2" else "v2"
+            labels = labelsv1 if label_version == "v1" else labelsv2
             labels = labels.to(device)
             outputs = model(*specs)
             loss = criterion(outputs, labels)
