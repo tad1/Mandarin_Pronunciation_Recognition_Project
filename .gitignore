@@ -1,5 +1,7 @@
-/data/
+/data/source/
 /res/
+.vscode
+*:Zone.Identifier
 
 ##### Python related #####
 

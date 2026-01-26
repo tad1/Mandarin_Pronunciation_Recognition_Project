@@ -1,6 +1,6 @@
 import os
 from typing import Literal
-from path import PG_EXPERIMENT_PATH, fix_path
+from path import PG_EXPERIMENT_PATH, EXAMPLE_PATH, fix_path
 
 # NOTE, this code is coupled with dataset filesystem structure:
 # PG_EXPERIMENT_PATH
@@ -178,8 +178,101 @@ def get_pg_experiment_dataframe(extension=".ogg", verbose=False, assesment_versi
     return df_assesment_pronunciation, df_assesment_tone
 
 
+EXAMPLE_ASSESSMENT_CSV = os.path.join(EXAMPLE_PATH, "assessment.csv")
+EXAMPLE_AUDIO_PATH = os.path.join(EXAMPLE_PATH, "recordings/")
+
+def get_example_dataframe(extension=".ogg", verbose=False):
+    """
+    Simplified get_pg_experiment_dataframe for example data.
+    """
+    df_assesment = pl.read_csv(EXAMPLE_ASSESSMENT_CSV, null_values=["NULL"])
+    
+    df_assesment = df_assesment.drop("id_evaluator", "gender", strict=False)
+    df_assesment = df_assesment.rename({"id": "id_student"}, strict=False)
+    
+    excluded_rows = ["id_student"]
+    REGEX_EXPR = r"^\s*([a-zA-Z]\d+)([tp])(\d*)\s*$"
+    
+    df_assesment = (
+        df_assesment.unpivot(index=excluded_rows, on=cs.exclude(excluded_rows))
+        .drop_nulls()
+        .with_columns(
+            [
+                pl.col("variable").str.extract(REGEX_EXPR, 1).alias("word_id"),
+                pl.col("variable").str.extract(REGEX_EXPR, 2).alias("type"),
+                pl.col("value").cast(pl.Int64)
+            ]
+        )
+    )
+
+    rec_pl_expr = (
+        pl.when(pl.col("word_id").str.starts_with("q"))
+        .then(
+            pl.concat_str([
+                pl.lit(EXAMPLE_AUDIO_PATH + os.path.sep),
+                pl.lit("stageII" + os.path.sep),
+                pl.col("id_student"),
+                pl.lit(os.path.sep),
+                pl.col("word_id"),
+                pl.lit(extension),
+            ])
+        )
+        .otherwise(
+            pl.concat_str([
+                pl.lit(EXAMPLE_AUDIO_PATH + os.path.sep),
+                pl.lit("stageI" + os.path.sep),
+                pl.col("id_student"),
+                pl.lit(os.path.sep),
+                pl.col("word_id"),
+                pl.lit(extension),
+            ])
+        )
+        .map_elements(os.path.normpath, return_dtype=pl.String)
+        .alias("rec_path")
+    )
+    
+    stage_pl_expr = (
+        pl.when(pl.col("word_id").str.starts_with("q"))
+        .then(pl.lit(2))
+        .otherwise(pl.lit(1))
+        .alias("stage")
+    )
+
+    df_assesment_tone = (
+        df_assesment.filter(pl.col("type") == "t")
+        .sort(["id_student", "variable"])
+        .group_by(["id_student", "word_id"])
+        .agg(pl.col("value").alias("tone_assesment"))
+        .with_columns(rec_pl_expr, stage_pl_expr)
+    )
+
+    df_assesment_pronunciation = (
+        df_assesment.filter(pl.col("type") == "p")
+        .drop("variable", "type")
+        .with_columns(rec_pl_expr, stage_pl_expr)
+    )
+
+    def filter_existing_files(df: pl.DataFrame) -> pl.DataFrame:
+        if df.height == 0:
+            return df
+        paths = df["rec_path"].to_list()
+        mask = [os.path.exists(path) for path in paths]
+        
+        dropped = df.filter(~pl.Series(mask))
+        if dropped.height > 0:
+            print(f"get_example_dataframe(): WARNING, Dropped {dropped.height} rows with missing files")
+            if verbose:
+                print(dropped)
+        return df.filter(pl.Series(mask))
+
+    df_assesment_tone = filter_existing_files(df_assesment_tone)
+    df_assesment_pronunciation = filter_existing_files(df_assesment_pronunciation)
+
+    return df_assesment_pronunciation, df_assesment_tone
+
 if __name__ == "__main__":
     # Note, use `python -m data.pg_experiment` from `src/` directory to run this code 
     a, b = get_pg_experiment_dataframe()
     print(a)
     print(b)
+
