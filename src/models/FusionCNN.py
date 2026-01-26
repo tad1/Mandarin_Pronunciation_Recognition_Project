@@ -158,4 +158,4 @@ class ContextFusionCNN(nn.Module):
         x_word = self.word_embedding(x_word)
         x = torch.cat((x_2d, x_1d, x_word), dim=1)
         x = self.classifier(x)
-        return torch.sigmoid(x).squeeze(1)
+        return x

@@ -103,16 +103,20 @@ def train(model, dataloader, optimizer, criterion, device):
     total_samples = 0
 
     for *specs, labels in dataloader:
-        specs = (spec.to(device) for spec in specs)
-        labels = labels.to(device)
+        specs = [spec.to(device) for spec in specs] 
+        labels = labels.to(device).long()
+        
         optimizer.zero_grad()
         outputs = model(*specs)
+        
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
+        
         total_loss += loss.item() * labels.size(0)
 
-        preds = (outputs >= 0.5).float()
+        # Multi-class accuracy: find the index of the maximum logit
+        _, preds = torch.max(outputs, 1)
         total_correct += (preds == labels).sum().item()
         total_samples += labels.size(0)
 
@@ -129,14 +133,16 @@ def evaluate(model, dataloader, criterion, device):
 
     with torch.no_grad():
         for *specs, labels in dataloader:
-            specs = (spec.to(device) for spec in specs)
-            labels = labels.to(device)
+            specs = [spec.to(device) for spec in specs]
+            labels = labels.to(device).long()
+            
             outputs = model(*specs)
             loss = criterion(outputs, labels)
 
             total_loss += loss.item() * labels.size(0)
 
-            preds = (outputs >= 0.5).float()
+            # Multi-class accuracy
+            _, preds = torch.max(outputs, 1)
             total_correct += (preds == labels).sum().item()
             total_samples += labels.size(0)
 
