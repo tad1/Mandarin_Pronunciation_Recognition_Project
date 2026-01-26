@@ -18,6 +18,7 @@ PG_EXPERIMENT_PATH = os.path.join(DATA_DIRECTORY, "source/pg_dataset/")
 EXPERIMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "experiment.csv")
 ASSESMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "assesment.csv")
 AUDIO_PATH = os.path.join(PG_EXPERIMENT_PATH, "recordings/")
+EXAMPLE_PATH = os.path.join(DATA_DIRECTORY, "example/pg_dataset/")
 
 ## requires dataset structure:
 # PG_EXPERIMENT_PATH
