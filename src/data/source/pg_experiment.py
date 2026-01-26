@@ -21,13 +21,15 @@ ASSESMENT_CSV = os.path.join(PG_EXPERIMENT_PATH, "assesment.csv")
 ASSESMENT_V2_CSV = os.path.join(PG_EXPERIMENT_PATH, "assesment_round2.csv")
 TONES_WITH_LABEL_XLS = os.path.join(PG_EXPERIMENT_PATH, "tones_with_label.xls")
 AUDIO_PATH = os.path.join(PG_EXPERIMENT_PATH, "recordings/")
+LabelsType = Literal["v1", "v2"]
+LABEL_VERSION = "v2"
 
 import polars as pl
 import polars.selectors as cs
 
 
 # Note, this is fast enought; so I won't cache this
-def get_pg_experiment_dataframe(extension=".ogg", verbose=False, assesment_version:Literal["v1","v2"]="v2"):
+def get_pg_experiment_dataframe(extension=".ogg", verbose=False, assesment_version:Literal["v1","v2"]=LABEL_VERSION):
     """_summary_
     Returns:
         _type_: `df_assesment_pronunciation`, `df_assesment_tone`
