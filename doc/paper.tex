@@ -1,0 +1,177 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{A Speech Recognition Model for Mandarin Chinese Pronunciation Evaluation\\
+
+}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Tadeusz Brzeski}
+\IEEEauthorblockA{\textit{WETI (do poprawy)} \\
+\textit{Gdańsk University of Technology}\\
+Gdańsk, Poland \\
+s191343@student.pg.edu.pl}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Kamil Fischbach}
+\IEEEauthorblockA{\textit{WETI (do poprawy)} \\
+\textit{Gdańsk University of Technology}\\
+Gdańsk, Poland \\
+fischbach.kamil@gmail.com}
+}
+
+\maketitle
+
+\begin{abstract}
+This research evaluates a multi-modal Convolutional Neural Network (CNN) for assessing Mandarin Chinese pronunciation accuracy on a restricted vocabulary dataset. The architecture integrates 2D Mel spectrograms, 1D temporal features, and word embeddings. To address label inconsistency in the training data, a three-class classification framework and stochastic label selection were implemented. GPU-accelerated data processing in PyTorch achieved a tenfold increase in training throughput. Model achieved 80\% training accuracy and 74\% validation accuracy.
+\end{abstract}
+
+\begin{IEEEkeywords}
+CNN, convolutional, speach recognition, CALL, multi-modal, mandarin, chinese, pronunciation, AI, machine learning, ML, mel spectrogram, MFCC
+\end{IEEEkeywords}
+
+\section{Introduction}
+(what was the goal of this project)?
+- a reference for a future work
+- the source code is on GitHub
+
+Example:
+The automated assessment of Computer-Assisted Language Learning (CALL) systems has become increasingly vital as the demand for remote linguistic education grows. Evaluating non-spontaneous speech requires high precision to provide learners with actionable feedback. This study investigates the feasibility of developing a robust speech recognition model tailored for Mandarin Chinese pronunciation assessment using a limited vocabulary dataset of elementary words.
+
+A significant challenge in automated pronunciation scoring is the inherent subjectivity of human labels. Native speaker evaluations often exhibit variance, introducing noise into the training process. To address this, our research focuses on stabilizing the learning process through data filtering and the introduction of a three-class classification framework to handle ambiguous samples.
+
+The methodology leverages a multimodal Convolutional Neural Network (CNN) architecture. By integrating 2D spectral features, specifically Mel spectrograms and MFCCs, with 1D temporal parameters and word embeddings, the model captures a comprehensive representation of phonetic accuracy.
+
+To ensure computational efficiency, the implementation utilizes GPU-accelerated data processing within the PyTorch framework, achieving a significant reduction in training time. This paper details the preprocessing pipeline, the stochastic label selection strategy used to mitigate label inconsistency, and the subsequent performance metrics achieved during validation.
+
+- *optimal model* architecture
+
+\section{Experiments}
+\subsection{Data}
+The dataset originates from Yen Ying Ng's doctoral research and comprises 12,000+ audio samples collected from multi-university student populations. The dataset focuses on numeral pronunciation (1-10, 100) and short-word utterances, with speakers predominantly of Polish native language background, supplemented by additional linguistic groups.
+
+
+
+- dataset is not public
+- there where 2 assesments rounds (2 versions - give a dates)
+    - evaluated by a single person each time
+    - we used second version; and used the first one for data augmentation
+- each audio sample is binary assessed for pronunciation and tone correctness
+    - for multi-tone each tone is assessed separately
+
+- contains a different quality of non-clean audio samples different microphones, mouse clicks, empty recordings.
+ 
+- model was trained only on subset (denoted as `stageI`)
+
+
+\subsubsection{Data preparation}
+- stratified train/val/test split (70/15/15)
+- where train and val contains (v1 + v2) and test contains samples where v1 == v2
+
+- resampling to 16kHz + vad using Silero VAD
+
+- feature extraction:
+    - 2D features: Mel spectrograms + MFCCs
+    - 1D features: zero-crossing rate, RMS energy
+    - word embedding
+
+- collate (80 samples)
+
+- details, on libraries used
+- MFCC - from torchaudio
+- zero-crossing rate + RMS - from librosa
+- embeddings - torch.nn.Embedding
+
+\subsection{Limitations}
+- a binary classification problem
+    - given audio representation and the word spoken
+    - we want to predict if the pronunciation is correct or not
+    - a single output from model
+- we limited to the vocabulary of 12 words
+- focused only on pronunciation correctness; without tone correctness
+
+\subsection{Model Architecture}
+- we tested multiple architectures (highlights):
+- Guesser
+    - used as a reference point
+    - contains only word embeddings as input
+- ??? architecture
+    - 2D CNN for MFCC + word embeddings
+- ContextFusionCNN
+    - 2D CNN for Mel spectrograms
+    - 1D CNN for temporal features
+    - word embeddings
+
+- details
+- hyperparameters
+- exact architecture
+
+\section{Experiment}
+- refer to Appendix for reproduction details
+- all 3 models where trained on the same data
+- specs of hardware and versions
+
+\section{Results}
+- the results on classification
+
+\section{Future Work}
+- 
+
+
+\section*{Acknowledgment}
+Special thanks to Adam Przybyłek and Yen Ying Ng for mentorship and for providing the dataset.
+
+\section*{References}
+% \begin{thebibliography}{00}
+
+% \end{thebibliography}
+
+\section{Appendix}
+\subsection{Reproduction}
+This section provides detailed information necessary to reproduce the results presented in this paper.
+
+Prerequisites:
+\begin{itemize}
+    \item cloned git repository at commit ...
+    \item dataset you have ...
+\end{itemize}
+
+- tested on Windows and Linux; but the Linux is recommended (better performance)
+
+\begin{verbatim}
+./data/source/pg_dataset
+├── assesment.csv
+├── assesment_round2.csv
+├── experiment.csv
+├── recordings
+│   ├── stageI
+│   │   └── {id}
+│   │       └── {rec_id}.ogg
+│   └── stageII
+│       └── {id}
+│           └── {rec_id}.ogg
+└── tones_with_label.xls
+\end{verbatim}
+
+The dataset files' version can be verified using the following MD5 hashes:
+\begin{verbatim}
+d9bd78c33481236e86daef08b8862f08  assesment.csv
+933cffd064ca324669996a969a294856  assesment_round2.csv
+f53bcea6845883c79d6f6a945d9561bc  experiment.csv
+7c71fbc6c1d44f0d19eaef6356a81dde  tones_with_label.xls
+\end{verbatim}
+
+`../src/data/source/pg_experiment.py' is responsible for data cleaning and providing data in wide format.
+
+- dependencies can be installed using pip (from requirements.txt), or uv; the uv is recommended:
+
+
+
+\end{document}
