@@ -105,11 +105,8 @@ def train(model, dataloader, optimizer, criterion, device, label_version: Litera
     total_correct = 0
     total_samples = 0
 
-    for *specs, labelsv1, labelsv2 in dataloader:
+    for *specs, labels in dataloader:
         specs = (spec.to(device) for spec in specs)
-        if(interleave_labels):
-            label_version = "v1" if label_version == "v2" else "v2"
-        labels = labelsv1 if label_version == "v1" else labelsv2
         labels = labels.to(device)
         
         optimizer.zero_grad()
@@ -135,11 +132,8 @@ def evaluate(model, dataloader, criterion, device, label_version: Literal["v1", 
     total_samples = 0
 
     with torch.no_grad():
-        for *specs, labelsv1, labelsv2 in dataloader:
+        for *specs, labels in dataloader:
             specs = (spec.to(device) for spec in specs)
-            if(interleave_labels):
-                label_version = "v1" if label_version == "v2" else "v2"
-            labels = labelsv1 if label_version == "v1" else labelsv2
             labels = labels.to(device)
             outputs = model(*specs)
             loss = criterion(outputs, labels)

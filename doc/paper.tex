@@ -5,7 +5,9 @@
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
 \usepackage{textcomp}
+\usepackage{hyperref}
 \usepackage{xcolor}
+\usepackage{multirow}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
@@ -38,6 +40,10 @@ CNN, convolutional, speach recognition, CALL, multi-modal, mandarin, chinese, pr
 \end{IEEEkeywords}
 
 \section{Introduction}
+
+What?
+- 
+
 (what was the goal of this project)?
 - a reference for a future work
 - the source code is on GitHub
@@ -54,50 +60,54 @@ To ensure computational efficiency, the implementation utilizes GPU-accelerated 
 - *optimal model* architecture
 
 \section{Experiments}
+
+\subsection{Scope of project}
+This study investigates the feasibility of using convolutional neural networks for automated pronunciation assessment on a constrained vocabulary. The experiment focuses on 12 single-syllable Mandarin numerals from the dataset, evaluating only pronunciation correctness while excluding tone assessment. The problem is formulated as binary classification, where models predict whether a given pronunciation is correct or incorrect based on audio features and word identity.
+
 \subsection{Data}
-The dataset originates from Yen Ying Ng's doctoral research and comprises 12,000+ audio samples collected from multi-university student populations. The dataset focuses on numeral pronunciation (1-10, 100) and short-word utterances, with speakers predominantly of Polish native language background, supplemented by additional linguistic groups.
-
-
-
-- dataset is not public
-- there where 2 assesments rounds (2 versions - give a dates)
-    - evaluated by a single person each time
-    - we used second version; and used the first one for data augmentation
-- each audio sample is binary assessed for pronunciation and tone correctness
-    - for multi-tone each tone is assessed separately
-
-- contains a different quality of non-clean audio samples different microphones, mouse clicks, empty recordings.
- 
-- model was trained only on subset (denoted as `stageI`)
-
+\subsubsection{Dataset Description}
+The dataset used in this study originates from Yen Ying Ng's doctoral research. This proprietary dataset contains over 12,000 audio samples of Mandarin pronunciation of 30 Chinese words from 548 students across different universities. Each sample is manually assessed for both pronunciation and tone correctness. The speakers are predominantly of Polish native language background, with a minority representing different native languages.
 
 \subsubsection{Data preparation}
-- stratified train/val/test split (70/15/15)
-- where train and val contains (v1 + v2) and test contains samples where v1 == v2
+This experiment uses a subset of 12 numerals (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 100) from the dataset, where each word pronunciation consists of a single pinyin syllable. This experimental subset contains a total of 5,855 samples from 547 speakers. The data was split into training, validation, and test sets using a stratified approach based on word distribution (60/20/20 ratio). A fixed random seed was used to ensure consistent evaluation across experiments.
 
-- resampling to 16kHz + vad using Silero VAD
+To ensure consistency and compatibility with the models used, all audio samples were resampled to 16 kHz. The audio samples contained mouse clicks and unvoiced segments, which were addressed using Silero VAD to extract only voiced segments from each audio sample. Audio parameters including MFCC, zero-crossing rate, and RMS energy were extracted using the torchaudio and librosa libraries. The extracted parameters were padded or truncated to a fixed length without significant loss of information.
 
-- feature extraction:
-    - 2D features: Mel spectrograms + MFCCs
-    - 1D features: zero-crossing rate, RMS energy
-    - word embedding
+To speed up the training process, a custom PyTorch DataLoader was implemented that loads the entire processed dataset into GPU memory, eliminating the bottleneck of CPU-GPU data transfer.
 
-- collate (80 samples)
+\subsubsection{Feature Extraction}
+Two types of audio features were extracted from the samples:
 
-- details, on libraries used
-- MFCC - from torchaudio
-- zero-crossing rate + RMS - from librosa
-- embeddings - torch.nn.Embedding
+\begin{itemize}
+    \item \textbf{2D Spectral Features:} Mel Frequency Cepstral Coefficients (MFCCs) were computed using torchaudio with 40 coefficients, 128 mel bands, FFT size of 1024, and hop length of 512 samples.
+    \item \textbf{1D Temporal Features:} Zero-crossing rate and RMS energy were extracted using librosa with a frame length of 1024 and hop length of 512 samples.
+\end{itemize}
 
-\subsection{Limitations}
-- a binary classification problem
-    - given audio representation and the word spoken
-    - we want to predict if the pronunciation is correct or not
-    - a single output from model
-- we limited to the vocabulary of 12 words
-- focused only on pronunciation correctness; without tone correctness
+All feature sequences were padded or truncated to a fixed length of 80 frames to ensure uniform input dimensions across the dataset.
 
 \subsection{Model Architecture}
+While multiple architectures were evaluated during development, this paper focuses on the models that demonstrated the best performance after extensive experimentation and refinement.
+Three architectures where evaluated:
+
+\subsubsection{Zero Model}
+serves as a baseline for comparison. 
+It utilizes only word embeddings as input features, omitting any audio-derived information. 
+This model provides a reference point to assess added value of incorporating audio features in subsequent architectures.
+It consists of an embedding model followed by classification model.
+
+\subsubsection{ContextFusionCNN}
+integrates MFCC parameters (2D), temporal and energy features (1D), and word id (scalar) as input.
+Those inputs are passed through 2D CNN, 1D CNN, and embedding model, respectively.
+(those outputs are concatenated and passed to a classification head)
+
+
+\subsubsection{ContextCNN}
+ is a simplified variant of ContextFusionCNN that processes only 2D audio features (MFCC) and word embeddings, excluding temporal and energy parameters. This architecture was designed to evaluate the contribution of 1D features to overall model performance.
+
+
+
+
+
 - we tested multiple architectures (highlights):
 - Guesser
     - used as a reference point
@@ -114,12 +124,63 @@ The dataset originates from Yen Ying Ng's doctoral research and comprises 12,000
 - exact architecture
 
 \section{Experiment}
+
 - refer to Appendix for reproduction details
 - all 3 models where trained on the same data
 - specs of hardware and versions
 
+\subsection{Hardware and software}
+\begin{table}[h]
+\caption{Hardware Specifications}
+\label{tab:hardware_specs}
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Component} & \textbf{Specification} \\
+\hline
+OS & Manjaro Linux x86\_64 \\
+Kernel & 6.16.8-1-MANJARO \\
+CPU & Intel i3-9100F (4) @ 4.200GHz \\
+GPU & NVIDIA GeForce GTX 1060 6GB \\
+Memory & 12GB DDR4 2133MHz \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+The implementation relies on Python 3.13 and several key libraries for deep learning, audio processing, and data manipulation. Table \ref{tab:software_deps} lists the core dependencies with their respective versions used in this study.
+
+
+
+
+
 \section{Results}
-- the results on classification
+The results of the experiments are summarized in Table \ref{tab:model_accuracy}. 
+Zero Model, which serves as a baseline, achieved test accuracy of 62.5\%.
+ContextFusionCNN and ContextCNN models outperform the baseline, with test accuracies of 70.2\% and 71.2\%, respectively.
+
+
+\begin{table}
+\caption{model accuracy comparison}
+\label{tab:model_accuracy}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multirow{2}{*}{Model} & \multicolumn{3}{c|}{Accuracy} \\
+\cline{2-4}
+ & Train & Validation & Test \\
+\hline
+    Zero Model & 63.63\% & 65.50\% & 62.50\% \\
+    \hline
+    ContextFusionCNN & 75.77\% & 73.53\% & 70.07\% \\
+    \hline
+    ContextCNN & 73.80\% & 72.84\% & \textbf{72.11\%} \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
 
 \section{Future Work}
 - 
@@ -132,8 +193,48 @@ Special thanks to Adam Przybyłek and Yen Ying Ng for mentorship and for providi
 % \begin{thebibliography}{00}
 
 % \end{thebibliography}
-
+\newpage
+\appendix
 \section{Appendix}
+
+\begin{table}[h]
+\caption{Software Dependencies}
+\label{tab:software_deps}
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Package} & \textbf{Version} \\
+\hline
+\multicolumn{2}{|c|}{\textit{Deep Learning Framework}} \\
+\hline
+PyTorch & 2.9.0 \\
+torchaudio & 2.9.0 \\
+torchvision & 0.24.0 \\
+\hline
+\multicolumn{2}{|c|}{\textit{Audio Processing}} \\
+\hline
+librosa & 0.11.0 \\
+soundfile & 0.13.1 \\
+silero-vad & 6.0.0 \\
+\hline
+\multicolumn{2}{|c|}{\textit{Machine Learning Utilities}} \\
+\hline
+accelerate & 1.11.0 \\
+\hline
+\multicolumn{2}{|c|}{\textit{Data Processing}} \\
+\hline
+polars & 1.35.1 \\
+numpy & 2.3.1 \\
+\hline
+\multicolumn{2}{|c|}{\textit{Visualization \& Monitoring}} \\
+\hline
+matplotlib & 3.10.7 \\
+wandb & 0.22.3 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
 \subsection{Reproduction}
 This section provides detailed information necessary to reproduce the results presented in this paper.
 
@@ -145,20 +246,20 @@ Prerequisites:
 
 - tested on Windows and Linux; but the Linux is recommended (better performance)
 
-\begin{verbatim}
-./data/source/pg_dataset
-├── assesment.csv
-├── assesment_round2.csv
-├── experiment.csv
-├── recordings
-│   ├── stageI
-│   │   └── {id}
-│   │       └── {rec_id}.ogg
-│   └── stageII
-│       └── {id}
-│           └── {rec_id}.ogg
-└── tones_with_label.xls
-\end{verbatim}
+% \begin{verbatim}
+% ./data/source/pg_dataset
+% ├── assesment.csv
+% ├── assesment_round2.csv
+% ├── experiment.csv
+% ├── recordings
+% │   ├── stageI
+% │   │   └── {id}
+% │   │       └── {rec_id}.ogg
+% │   └── stageII
+% │       └── {id}
+% │           └── {rec_id}.ogg
+% └── tones_with_label.xls
+% \end{verbatim}
 
 The dataset files' version can be verified using the following MD5 hashes:
 \begin{verbatim}
@@ -168,7 +269,7 @@ f53bcea6845883c79d6f6a945d9561bc  experiment.csv
 7c71fbc6c1d44f0d19eaef6356a81dde  tones_with_label.xls
 \end{verbatim}
 
-`../src/data/source/pg_experiment.py' is responsible for data cleaning and providing data in wide format.
+% `../src/data/source/pg_experiment.py' is responsible for data cleaning and providing data in wide format.
 
 - dependencies can be installed using pip (from requirements.txt), or uv; the uv is recommended:
 
