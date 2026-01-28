@@ -29,10 +29,13 @@ Gdańsk, Poland \\
 fischbach.kamil@gmail.com}
 }
 
+
 \maketitle
 
 \begin{abstract}
-This research evaluates a multi-modal Convolutional Neural Network (CNN) for assessing Mandarin Chinese pronunciation accuracy on a restricted vocabulary dataset. The architecture integrates 2D Mel spectrograms, 1D temporal features, and word embeddings. To address label inconsistency in the training data, a three-class classification framework and stochastic label selection were implemented. GPU-accelerated data processing in PyTorch achieved a tenfold increase in training throughput. Model achieved 80\% training accuracy and 74\% validation accuracy.
+% This research evaluates a multi-modal Convolutional Neural Network (CNN) for assessing Mandarin Chinese pronunciation accuracy on a restricted vocabulary dataset. The architecture integrates 2D Mel spectrograms, 1D temporal features, and word embeddings. To address label inconsistency in the training data, a three-class classification framework and stochastic label selection were implemented. GPU-accelerated data processing in PyTorch achieved a tenfold increase in training throughput. Model achieved 80\% training accuracy and 74\% validation accuracy.
+(the binary assessment of mandarin pronuncation of L2 Polish speakers)
+
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -48,21 +51,36 @@ What?
 - a reference for a future work
 - the source code is on GitHub
 
-Example:
-The automated assessment of Computer-Assisted Language Learning (CALL) systems has become increasingly vital as the demand for remote linguistic education grows. Evaluating non-spontaneous speech requires high precision to provide learners with actionable feedback. This study investigates the feasibility of developing a robust speech recognition model tailored for Mandarin Chinese pronunciation assessment using a limited vocabulary dataset of elementary words.
+% Example:
+% The automated assessment of Computer-Assisted Language Learning (CALL) systems has become increasingly vital as the demand for remote linguistic education grows. Evaluating non-spontaneous speech requires high precision to provide learners with actionable feedback. This study investigates the feasibility of developing a robust speech recognition model tailored for Mandarin Chinese pronunciation assessment using a limited vocabulary dataset of elementary words.
 
-A significant challenge in automated pronunciation scoring is the inherent subjectivity of human labels. Native speaker evaluations often exhibit variance, introducing noise into the training process. To address this, our research focuses on stabilizing the learning process through data filtering and the introduction of a three-class classification framework to handle ambiguous samples.
+% A significant challenge in automated pronunciation scoring is the inherent subjectivity of human labels. Native speaker evaluations often exhibit variance, introducing noise into the training process. To address this, our research focuses on stabilizing the learning process through data filtering and the introduction of a three-class classification framework to handle ambiguous samples.
 
-The methodology leverages a multimodal Convolutional Neural Network (CNN) architecture. By integrating 2D spectral features, specifically Mel spectrograms and MFCCs, with 1D temporal parameters and word embeddings, the model captures a comprehensive representation of phonetic accuracy.
+% The methodology leverages a multimodal Convolutional Neural Network (CNN) architecture. By integrating 2D spectral features, specifically Mel spectrograms and MFCCs, with 1D temporal parameters and word embeddings, the model captures a comprehensive representation of phonetic accuracy.
 
-To ensure computational efficiency, the implementation utilizes GPU-accelerated data processing within the PyTorch framework, achieving a significant reduction in training time. This paper details the preprocessing pipeline, the stochastic label selection strategy used to mitigate label inconsistency, and the subsequent performance metrics achieved during validation.
+% To ensure computational efficiency, the implementation utilizes GPU-accelerated data processing within the PyTorch framework, achieving a significant reduction in training time. This paper details the preprocessing pipeline, the stochastic label selection strategy used to mitigate label inconsistency, and the subsequent performance metrics achieved during validation.
 
-- *optimal model* architecture
+% - *optimal model* architecture
 
-\section{Experiments}
+\section{Related Work}
+(Automatic Pronunciation Assessment for Mandarin Chinese)
+(sequence model; audio of sentences; score the pronuncation quality; uses HMM for speech processing, recognition; and GMM for tone recognition)
 
-\subsection{Scope of project}
+
+
+\section{Experiment}
+This section describes the experimental details and methodology employed to evaluate model architectures for Mandarin pronunciation assessment. 
+While multiple experiments were conducted during development and documented in the project repository, this paper consolidates several of them into a single experiment.
+
+
+\subsection{Problem formulation}
 This study investigates the feasibility of using convolutional neural networks for automated pronunciation assessment on a constrained vocabulary. The experiment focuses on 12 single-syllable Mandarin numerals from the dataset, evaluating only pronunciation correctness while excluding tone assessment. The problem is formulated as binary classification, where models predict whether a given pronunciation is correct or incorrect based on audio features and word identity.
+
+\subsection{Methodology}
+The experimental approach employed a comparative evaluation of multiple model architectures. Given the absence of comparable prior work for this specific task configuration, a zero model was established as a baseline reference. 
+This baseline model operates solely on word embeddings without incorporating any audio features, providing a reference point for performance without acoustic information. Comparing the audio-based models against this baseline demonstrates whether incorporating audio features improves prediction accuracy.
+
+Three architectures of increasing complexity were trained and evaluated on identical train-validation-test datasets to ensure fair comparison. Performance was measured across training, validation, and test sets to assess both learning capacity and generalization capability.
 
 \subsection{Data}
 \subsubsection{Dataset Description}
@@ -123,7 +141,7 @@ Those inputs are passed through 2D CNN, 1D CNN, and embedding model, respectivel
 - hyperparameters
 - exact architecture
 
-\section{Experiment}
+\section{Experimental Setup}
 
 - refer to Appendix for reproduction details
 - all 3 models where trained on the same data
@@ -159,6 +177,7 @@ The results of the experiments are summarized in Table \ref{tab:model_accuracy}.
 Zero Model, which serves as a baseline, achieved test accuracy of 62.5\%.
 ContextFusionCNN and ContextCNN models outperform the baseline, with test accuracies of 70.2\% and 71.2\%, respectively.
 
+TODO: confusion matrix (human vs machine) for test results
 
 \begin{table}
 \caption{model accuracy comparison}
@@ -180,7 +199,10 @@ ContextFusionCNN and ContextCNN models outperform the baseline, with test accura
 \end{center}
 \end{table}
 
-
+\section{Discussion}
+(while the multi modal didn't increased, the performance )
+(an additional research is needed to determine whenever it's a problem with information redundancy, or with the architecture)
+()
 
 \section{Future Work}
 - 
@@ -189,7 +211,6 @@ ContextFusionCNN and ContextCNN models outperform the baseline, with test accura
 \section*{Acknowledgment}
 Special thanks to Adam Przybyłek and Yen Ying Ng for mentorship and for providing the dataset.
 
-\section*{References}
 % \begin{thebibliography}{00}
 
 % \end{thebibliography}
