@@ -7,7 +7,10 @@
 \usepackage{textcomp}
 \usepackage{hyperref}
 \usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows, positioning, calc, fit}
 \usepackage{multirow}
+\usepackage{diagbox}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
@@ -17,13 +20,13 @@
 }
 
 \author{\IEEEauthorblockN{1\textsuperscript{st} Tadeusz Brzeski}
-\IEEEauthorblockA{\textit{WETI (do poprawy)} \\
+\IEEEauthorblockA{\textit{Faculty of Electronics, Telecommunications and Informatics} \\
 \textit{Gdańsk University of Technology}\\
 Gdańsk, Poland \\
 s191343@student.pg.edu.pl}
 \and
 \IEEEauthorblockN{2\textsuperscript{nd} Kamil Fischbach}
-\IEEEauthorblockA{\textit{WETI (do poprawy)} \\
+\IEEEauthorblockA{\textit{Faculty of Electronics, Telecommunications and Informatics} \\
 \textit{Gdańsk University of Technology}\\
 Gdańsk, Poland \\
 fischbach.kamil@gmail.com}
@@ -33,34 +36,29 @@ fischbach.kamil@gmail.com}
 \maketitle
 
 \begin{abstract}
-% This research evaluates a multi-modal Convolutional Neural Network (CNN) for assessing Mandarin Chinese pronunciation accuracy on a restricted vocabulary dataset. The architecture integrates 2D Mel spectrograms, 1D temporal features, and word embeddings. To address label inconsistency in the training data, a three-class classification framework and stochastic label selection were implemented. GPU-accelerated data processing in PyTorch achieved a tenfold increase in training throughput. Model achieved 80\% training accuracy and 74\% validation accuracy.
-(the binary assessment of mandarin pronuncation of L2 Polish speakers)
-
+This paper investigates convolutional neural networks for automated pronunciation assessment of Mandarin Chinese on a constrained vocabulary task. We evaluate three architectures: a baseline (using only word identity without audio features), ContextFusionCNN (a multi-modal architecture integrating MFCCs with temporal features), and ContextCNN (a simplified variant using only MFCCs). The dataset consists of 5,855 single-syllable Mandarin numeral pronunciations by Polish native speakers. Results demonstrate that both CNN-based models outperform the baseline, with ContextCNN achieving the best test accuracy of 71.7\%. Trained models and source code are released under the MIT license on GitHub\footnote{\url{https://github.com/tad1/Mandarin_Pronunciation_Recognition_Project}}.
 \end{abstract}
 
 \begin{IEEEkeywords}
-CNN, convolutional, speach recognition, CALL, multi-modal, mandarin, chinese, pronunciation, AI, machine learning, ML, mel spectrogram, MFCC
+Pronunciation assessment, Mandarin Chinese, convolutional neural networks, MFCC, computer-assisted language learning, speech recognition, multi-modal learning
 \end{IEEEkeywords}
 
 \section{Introduction}
 
-What?
-- 
+Automated pronunciation assessment plays an important role in computer-assisted language learning (CALL) systems, enabling learners to receive feedback without requiring constant human supervision. Mandarin Chinese pronunciation assessment presents challenges due to its tonal system and phonetic features that may be unfamiliar to speakers of other languages.
 
-(what was the goal of this project)?
-- a reference for a future work
-- the source code is on GitHub
+This paper investigates convolutional neural network architectures for Mandarin pronunciation assessment on a constrained vocabulary task. We evaluate three models: a baseline using only word embeddings, and two CNN-based architectures that incorporate acoustic features (i.e. MFCCs) with varying complexity. The dataset consists of 5,855 single-syllable numeral Mandarin pronunciations from Polish native speakers.
 
-% Example:
-% The automated assessment of Computer-Assisted Language Learning (CALL) systems has become increasingly vital as the demand for remote linguistic education grows. Evaluating non-spontaneous speech requires high precision to provide learners with actionable feedback. This study investigates the feasibility of developing a robust speech recognition model tailored for Mandarin Chinese pronunciation assessment using a limited vocabulary dataset of elementary words.
+The contributions of this work are: (1) empirical comparison of CNN-based models against a baseline for pronunciation assessment, (2) release of trained models and source code under the MIT license. The codebase provides a framework with composable abstractions for declarative dataset construction, designed to reduce coupling and prevent errors. Additional experiments are documented in the project repository issues\footnote{\url{https://github.com/tad1/Mandarin_Pronunciation_Recognition_Project/issues}}.
 
-% A significant challenge in automated pronunciation scoring is the inherent subjectivity of human labels. Native speaker evaluations often exhibit variance, introducing noise into the training process. To address this, our research focuses on stabilizing the learning process through data filtering and the introduction of a three-class classification framework to handle ambiguous samples.
+The remainder of this paper is organized as follows: Section \ref{sec:related_work} reviews related work in Mandarin pronunciation assessment. Section \ref{sec:experiment} describes the experimental methodology and dataset. Section \ref{sec:experimental_setup} details the experimental setup. Section \ref{sec:results} presents results. Section \ref{sec:discussion} discusses findings and limitations. Section \ref{sec:future_work} outlines future research directions.
 
-% The methodology leverages a multimodal Convolutional Neural Network (CNN) architecture. By integrating 2D spectral features, specifically Mel spectrograms and MFCCs, with 1D temporal parameters and word embeddings, the model captures a comprehensive representation of phonetic accuracy.
+\section{Related Work}
+\label{sec:related_work}
 
-% To ensure computational efficiency, the implementation utilizes GPU-accelerated data processing within the PyTorch framework, achieving a significant reduction in training time. This paper details the preprocessing pipeline, the stochastic label selection strategy used to mitigate label inconsistency, and the subsequent performance metrics achieved during validation.
+Automatic pronunciation assessment for Mandarin Chinese has evolved from traditional HMM/GMM-based approaches to deep learning methods. Chen et al. \cite{chen2004} developed a pronunciation assessment system using HMM-based speech processing for phoneme recognition combined with GMM-based tone recognition on sentence-level audio. Li et al. \cite{li2016} proposed a DNN-based tone extended recognition network (ERN) for tone mispronunciation detection, reducing equal error rate by 10.98\% relative compared to conventional GOP systems. More recently, Wang et al. \cite{wang2024} introduced a stateless RNN-T model utilizing HuBERT features with pitch embedding, achieving a 3\% improvement in Phone Error Rate trained solely on native speaker data.
 
-% - *optimal model* architecture
+In contrast to these sequence-based approaches on continuous speech, this study investigates convolutional neural networks on a constrained vocabulary of single-syllable words, evaluating pronunciation correctness without tone assessment.
 
 \section{Related Work}
 (Automatic Pronunciation Assessment for Mandarin Chinese)
@@ -69,6 +67,7 @@ What?
 
 
 \section{Experiment}
+\label{sec:experiment}
 This section describes the experimental details and methodology employed to evaluate model architectures for Mandarin pronunciation assessment. 
 While multiple experiments were conducted during development and documented in the project repository, this paper consolidates several of them into a single experiment.
 
@@ -89,7 +88,7 @@ The dataset used in this study originates from Yen Ying Ng's doctoral research. 
 \subsubsection{Data preparation}
 This experiment uses a subset of 12 numerals (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 100) from the dataset, where each word pronunciation consists of a single pinyin syllable. This experimental subset contains a total of 5,855 samples from 547 speakers. The data was split into training, validation, and test sets using a stratified approach based on word distribution (60/20/20 ratio). A fixed random seed was used to ensure consistent evaluation across experiments.
 
-To ensure consistency and compatibility with the models used, all audio samples were resampled to 16 kHz. The audio samples contained mouse clicks and unvoiced segments, which were addressed using Silero VAD to extract only voiced segments from each audio sample. Audio parameters including MFCC, zero-crossing rate, and RMS energy were extracted using the torchaudio and librosa libraries. The extracted parameters were padded or truncated to a fixed length without significant loss of information.
+To ensure consistency and compatibility with the models used, all audio samples were resampled to 16 kHz. The audio samples contained mouse clicks and unvoiced segments, which were addressed using Silero VAD \cite{silero_vad} to extract only voiced segments from each audio sample. Audio parameters including MFCC, zero-crossing rate, and RMS energy were extracted using the torchaudio \cite{hwang2023torchaudio} and librosa \cite{librosa} libraries. The extracted parameters were padded or truncated to a fixed length without significant loss of information.
 
 To speed up the training process, a custom PyTorch DataLoader was implemented that loads the entire processed dataset into GPU memory, eliminating the bottleneck of CPU-GPU data transfer.
 
@@ -97,15 +96,16 @@ To speed up the training process, a custom PyTorch DataLoader was implemented th
 Two types of audio features were extracted from the samples:
 
 \begin{itemize}
-    \item \textbf{2D Spectral Features:} Mel Frequency Cepstral Coefficients (MFCCs) were computed using torchaudio with 40 coefficients, 128 mel bands, FFT size of 1024, and hop length of 512 samples.
-    \item \textbf{1D Temporal Features:} Zero-crossing rate and RMS energy were extracted using librosa with a frame length of 1024 and hop length of 512 samples.
+    \item \textbf{2D Spectral Features:} Mel Frequency Cepstral Coefficients (MFCCs) were computed using torchaudio \cite{hwang2023torchaudio} with 40 coefficients, 128 mel bands, FFT size of 1024, and hop length of 512 samples.
+    \item \textbf{1D Temporal Features:} Zero-crossing rate and RMS energy were extracted using librosa \cite{librosa} with a frame length of 1024 and hop length of 512 samples.
 \end{itemize}
 
 All feature sequences were padded or truncated to a fixed length of 80 frames to ensure uniform input dimensions across the dataset.
 
 \subsection{Model Architecture}
 While multiple architectures were evaluated during development, this paper focuses on the models that demonstrated the best performance after extensive experimentation and refinement.
-Three architectures where evaluated:
+Detailed implementation specifics are available in the project repository, while high-level architectural diagrams are presented in Figure \ref{fig:model_architectures}.
+Three architectures were evaluated:
 
 \subsubsection{Zero Model}
 serves as a baseline for comparison. 
@@ -115,39 +115,229 @@ It consists of an embedding model followed by classification model.
 
 \subsubsection{ContextFusionCNN}
 integrates MFCC parameters (2D), temporal and energy features (1D), and word id (scalar) as input.
-Those inputs are passed through 2D CNN, 1D CNN, and embedding model, respectively.
-(those outputs are concatenated and passed to a classification head)
-
+These inputs are passed through 2D CNN, 1D CNN, and embedding model, respectively.
+The resulting feature vectors are concatenated and passed to a classification head, enabling the model to leverage both spectral and temporal information alongside word context for pronunciation assessment.
 
 \subsubsection{ContextCNN}
  is a simplified variant of ContextFusionCNN that processes only 2D audio features (MFCC) and word embeddings, excluding temporal and energy parameters. This architecture was designed to evaluate the contribution of 1D features to overall model performance.
 
+\begin{figure}[t]
+\raggedright
+\tikzstyle{input} = [rectangle, draw, minimum width=1.2cm, minimum height=0.6cm, font=\tiny, align=center, fill=blue!20]
+\tikzstyle{process} = [rectangle, draw, rounded corners, minimum width=1.5cm, minimum height=0.6cm, font=\tiny, align=center, fill=orange!30]
+\tikzstyle{concat} = [rectangle, draw, minimum width=0.9cm, minimum height=1.2cm, font=\tiny, align=center, fill=pink!40]
+\tikzstyle{classifier} = [rectangle, draw, rounded corners, minimum width=1.2cm, minimum height=0.9cm, font=\tiny, align=center, fill=yellow!30]
+\tikzstyle{output} = [rectangle, draw, minimum width=0.9cm, minimum height=0.5cm, font=\tiny, align=center, fill=green!30]
+\tikzstyle{arrow} = [->, >=stealth]
+
+% Zero Model
+\begin{tikzpicture}[node distance=0.4cm and 0.3cm, >=stealth, scale=0.75, every node/.style={scale=1.0}]
+    \coordinate (origin) at (0,0);
+    \node[input, anchor=west] (word) at (origin) {Word ID};
+    \node[process, right=of word] (emb) {Embedding};
+    \node[classifier, right=of emb] (cls) {Classifier};
+    \node[output, right=of cls] (out) {Output};
+    
+    \draw[arrow] (word) -- (emb);
+    \draw[arrow] (emb) -- (cls);
+    \draw[arrow] (cls) -- (out);
+    
+    \node[anchor=north west] at (word.south west) {\scriptsize\bfseries (1) Zero Model};
+\end{tikzpicture}
+\vspace{0.4cm}
+
+% ContextFusionCNN
+\begin{tikzpicture}[node distance=0.4cm and 0.3cm, >=stealth, scale=0.75, every node/.style={scale=1.0}]
+    \tikzstyle{concat3} = [rectangle, draw, minimum width=0.9cm, minimum height=1.8cm, font=\tiny, align=center, fill=pink!40]
+    
+    \coordinate (origin) at (0,0);
+    \node[input, anchor=west] (mfcc) at (origin) {MFCC\\(40×80)};
+    \node[input, below=0.4cm of mfcc] (zcr) {ZCR/RMS\\(2×80)};
+    \node[input, below=0.4cm of zcr] (word) {Word ID};
+    
+    \node[process, right=of mfcc] (cnn2d) {2D CNN\\Conv+Pool};
+    \node[process, right=of zcr] (cnn1d) {1D CNN\\Conv+Pool};
+    \node[process, right=of word] (emb) {Embedding};
+    
+    \node[concat3, right=0.9cm of cnn1d] (cat) {Concat\\(176)};
+    \node[classifier, right=of cat] (cls) {Classifier};
+    \node[output, right=of cls] (out) {Output};
+    
+    \draw[arrow] (mfcc) -- (cnn2d);
+    \draw[arrow] (zcr) -- (cnn1d);
+    \draw[arrow] (word) -- (emb);
+    \draw[arrow] (cnn2d) -- (cat);
+    \draw[arrow] (cnn1d) -- (cat);
+    \draw[arrow] (emb) -- (cat);
+    \draw[arrow] (cat) -- (cls);
+    \draw[arrow] (cls) -- (out);
+    
+    \node[anchor=north west] at (word.south west) {\scriptsize\bfseries (2) ContextFusionCNN};
+\end{tikzpicture}
+\vspace{0.4cm}
+
+% ContextCNN
+\begin{tikzpicture}[node distance=0.4cm and 0.3cm, >=stealth, scale=0.75, every node/.style={scale=1.0}]
+    \coordinate (origin) at (0,0);
+    \node[input, anchor=west] (mfcc) at (origin) {MFCC\\(40×80)};
+    \node[input, below=0.4cm of mfcc] (word) {Word ID};
+    
+    \node[process, right=of mfcc] (cnn2d) {2D CNN\\Conv+Pool};
+    \node[process, right=of word] (emb) {Embedding};
+    
+    \node[concat, right=1.5cm of $(cnn2d)!0.5!(emb)$] (cat) {Concat\\(112)};
+    \node[classifier, right=of cat] (cls) {Classifier};
+    \node[output, right=of cls] (out) {Output};
+    
+    \draw[arrow] (mfcc) -- (cnn2d);
+    \draw[arrow] (word) -- (emb);
+    \draw[arrow] (cnn2d) -- (cat);
+    \draw[arrow] (emb) -- (cat);
+    \draw[arrow] (cat) -- (cls);
+    \draw[arrow] (cls) -- (out);
+    
+    \node[anchor=north west] at (word.south west) {\scriptsize\bfseries (3) ContextCNN};
+\end{tikzpicture}
 
 
 
+\caption{High-level diagrams of the evaluated model architectures.}
+\label{fig:model_architectures}
+\end{figure}
 
-- we tested multiple architectures (highlights):
-- Guesser
-    - used as a reference point
-    - contains only word embeddings as input
-- ??? architecture
-    - 2D CNN for MFCC + word embeddings
-- ContextFusionCNN
-    - 2D CNN for Mel spectrograms
-    - 1D CNN for temporal features
-    - word embeddings
 
-- details
-- hyperparameters
-- exact architecture
+
 
 \section{Experimental Setup}
+\label{sec:experimental_setup}
 
-- refer to Appendix for reproduction details
-- all 3 models where trained on the same data
-- specs of hardware and versions
+The experiment described in this paper corresponds to repository commit \texttt{paper\_v1.0}. Reproduction details, including hardware specifications, software dependencies, dataset verification, and execution instructions, are provided in Appendix \ref{sec:appendix}.
 
-\subsection{Hardware and software}
+All three models were trained on identical data splits using the same hyperparameters. Training employed the Adam optimizer (learning rate $10^{-4}$, weight decay $10^{-4}$) with binary cross-entropy loss. A ReduceLROnPlateau scheduler reduced the learning rate by 0.5 after 5 epochs without validation loss improvement. Models were trained for 140 epochs with batch size 16. CNN-based architectures incorporated batch normalization after each convolutional layer, ReLU activation, max pooling, adaptive average pooling for global feature aggregation, and progressively increasing dropout rates (0.1, 0.2, 0.3) across convolutional blocks. The classifier head used dropout rate 0.5.
+
+
+
+
+
+
+
+
+\section{Results}
+\label{sec:results}
+The results of the experiments are summarized in Table \ref{tab:model_accuracy}. 
+Zero Model, which serves as a baseline, achieved test accuracy of 64.4\%.
+Both audio-based models outperform the baseline: ContextFusionCNN achieved 70.1\% test accuracy, while ContextCNN demonstrated the highest performance with 71.7\% test accuracy.
+The small gap between training and test accuracy across all models indicates good generalization without significant overfitting.
+
+Table \ref{tab:confusion_matrix} presents the confusion matrices comparing model predictions against human expert assessments on the test set.
+
+\begin{table}[h]
+\caption{Model Performance Across Training, Validation, and Test Sets}
+\label{tab:model_accuracy}
+\begin{center}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\multirow{2}{*}{\textbf{Model}} & \multicolumn{3}{c|}{\textbf{Accuracy}} & \multicolumn{3}{c|}{\textbf{Test Set Metrics}} \\
+\cline{2-7}
+ & \textbf{Train} & \textbf{Val} & \textbf{Test} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\
+\hline
+Zero Model & 0.631 & 0.643 & 0.644 & 0.692 & 0.701 & 0.696 \\
+ContextFusionCNN & 0.743 & 0.703 & 0.701 & 0.712 & \textbf{0.816} & 0.761 \\
+\textbf{ContextCNN} & \textbf{0.757} & \textbf{0.730} & \textbf{0.717} & \textbf{0.744} & 0.783 & \textbf{0.763} \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\caption{Confusion Matrices: Model Predictions vs. Human Assessment on Test Set}
+\label{tab:confusion_matrix}
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+\multicolumn{3}{|c|}{\textbf{Zero Model}} \\
+\hline
+\diagbox{\textbf{Expert}}{\textbf{Model}} & \textbf{Correct} & \textbf{Incorrect} \\
+\hline
+\textbf{Correct} & 480 & 205 \\
+\hline
+\textbf{Incorrect} & 214 & 277 \\
+\hline
+\end{tabular}
+
+\vspace{0.3cm}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\multicolumn{3}{|c|}{\textbf{ContextFusionCNN}} \\
+\hline
+\diagbox{\textbf{Expert}}{\textbf{Model}} & \textbf{Correct} & \textbf{Incorrect} \\
+\hline
+\textbf{Correct} & 559 & 126 \\
+\hline
+\textbf{Incorrect} & 226 & 265 \\
+\hline
+\end{tabular}
+
+\vspace{0.3cm}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\multicolumn{3}{|c|}{\textbf{ContextCNN}} \\
+\hline
+\diagbox{\textbf{Expert}}{\textbf{Model}} & \textbf{Correct} & \textbf{Incorrect} \\
+\hline
+\textbf{Correct} & 536 & 149 \\
+\hline
+\textbf{Incorrect} & 184 & 307 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\section{Discussion}
+\label{sec:discussion}
+ContextFusionCNN achieved lower accuracy than ContextCNN despite incorporating additional features (i.e. zero-crossing rate and RMS energy). This result suggests several possible explanations: (1) the temporal features may be redundant with information already encoded in MFCCs, (2) these features may be irrelevant for pronunciation assessment in this constrained vocabulary task, or (3) the 1D CNN branch may process these features suboptimally. Future work should evaluate whether ZCR and RMS energy alone (without MFCCs) contribute to classification accuracy, which would help distinguish between feature redundancy and architectural limitations.
+
+The Zero Model baseline achieves 64.4\% test accuracy by learning word-level error rates without acoustic features. The stratified split preserves these error distributions across train and test sets. If the dataset reflects real-world learner patterns, this statistical approach could provide meaningful information.
+
+
+The constrained vocabulary of 12 single-syllable numerals limits the generalizability of these findings to broader pronunciation assessment tasks. Additionally, the dataset consists predominantly of Polish native speakers, which may not represent pronunciation patterns from learners of other language backgrounds. Finally, this study evaluates pronunciation correctness without assessing tonal accuracy, which is essential in Mandarin.
+
+\section{Future Work}
+\label{sec:future_work}
+Future research could systematically evaluate alternative audio features to identify optimal representations for pronunciation assessment. Investigating model interpretability would help understand what acoustic patterns the CNN learns. Incorporating tone assessment into the framework would address a critical limitation of the current approach. Thorough investigation of pretrained models such as Wav2Vec2 would determine whether acoustic representations from ASR-trained models are effective for pronunciation assessment. Developing public benchmark datasets would enable standardized evaluation and comparison of different methods.
+
+\section*{Acknowledgment}
+Special thanks to dr Adam Przybyłek and Yen Ying Ng for mentorship and for providing the dataset.
+
+\begin{thebibliography}{00}
+
+\bibitem{chen2004}
+J.-C. Chen, J.-S. Jang, J.-Y. Li, and M.-C. Wu, ``Automatic pronunciation assessment for Mandarin Chinese,'' in \textit{IEEE International Conference on Multimedia and Expo (ICME)}, vol. 3, 2004, pp. 1979--1982.
+
+\bibitem{li2016}
+W. Li, S. M. Siniscalchi, N. F. Chen, and C.-H. Lee, ``Using tone-based extended recognition network to detect non-native Mandarin tone mispronunciations,'' in \textit{2016 Asia-Pacific Signal and Information Processing Association Annual Summit and Conference (APSIPA)}, 2016, pp. 1--4.
+
+\bibitem{wang2024}
+X. Wang, M. Shi, and Y. Wang, ``Pitch-aware RNN-T for Mandarin Chinese mispronunciation detection and diagnosis,'' \textit{arXiv preprint arXiv:2406.04595}, 2024.
+
+\bibitem{silero_vad}
+Silero Team, ``Silero VAD: pre-trained enterprise-grade Voice Activity Detector (VAD), Number Detector and Language Classifier,'' GitHub repository, 2024. [Online]. Available: \url{https://github.com/snakers4/silero-vad}
+
+\bibitem{librosa}
+B. McFee \textit{et al.}, ``librosa/librosa: 0.11.0,'' Zenodo, version 0.11.0, Mar. 2025, doi: 10.5281/zenodo.15006942. [Online]. Available: \url{https://doi.org/10.5281/zenodo.15006942}
+
+\bibitem{hwang2023torchaudio}
+J. Hwang \textit{et al.}, ``TorchAudio 2.1: Advancing speech recognition, self-supervised learning, and audio processing components for PyTorch,'' \textit{arXiv preprint arXiv:2310.17864}, 2023.
+
+\end{thebibliography}
+\appendix
+\section{Appendix}
+\label{sec:appendix}
+
 \begin{table}[h]
 \caption{Hardware Specifications}
 \label{tab:hardware_specs}
@@ -165,58 +355,6 @@ Memory & 12GB DDR4 2133MHz \\
 \end{tabular}
 \end{center}
 \end{table}
-
-The implementation relies on Python 3.13 and several key libraries for deep learning, audio processing, and data manipulation. Table \ref{tab:software_deps} lists the core dependencies with their respective versions used in this study.
-
-
-
-
-
-\section{Results}
-The results of the experiments are summarized in Table \ref{tab:model_accuracy}. 
-Zero Model, which serves as a baseline, achieved test accuracy of 62.5\%.
-ContextFusionCNN and ContextCNN models outperform the baseline, with test accuracies of 70.2\% and 71.2\%, respectively.
-
-TODO: confusion matrix (human vs machine) for test results
-
-\begin{table}
-\caption{model accuracy comparison}
-\label{tab:model_accuracy}
-\begin{center}
-\begin{tabular}{|c|c|c|c|}
-\hline
-\multirow{2}{*}{Model} & \multicolumn{3}{c|}{Accuracy} \\
-\cline{2-4}
- & Train & Validation & Test \\
-\hline
-    Zero Model & 63.63\% & 65.50\% & 62.50\% \\
-    \hline
-    ContextFusionCNN & 75.77\% & 73.53\% & 70.07\% \\
-    \hline
-    ContextCNN & 73.80\% & 72.84\% & \textbf{72.11\%} \\
-\hline
-\end{tabular}
-\end{center}
-\end{table}
-
-\section{Discussion}
-(while the multi modal didn't increased, the performance )
-(an additional research is needed to determine whenever it's a problem with information redundancy, or with the architecture)
-()
-
-\section{Future Work}
-- 
-
-
-\section*{Acknowledgment}
-Special thanks to Adam Przybyłek and Yen Ying Ng for mentorship and for providing the dataset.
-
-% \begin{thebibliography}{00}
-
-% \end{thebibliography}
-\newpage
-\appendix
-\section{Appendix}
 
 \begin{table}[h]
 \caption{Software Dependencies}
@@ -257,32 +395,19 @@ wandb & 0.22.3 \\
 \end{table}
 
 \subsection{Reproduction}
-This section provides detailed information necessary to reproduce the results presented in this paper.
 
-Prerequisites:
-\begin{itemize}
-    \item cloned git repository at commit ...
-    \item dataset you have ...
-\end{itemize}
+To reproduce the results, follow these steps:
 
-- tested on Windows and Linux; but the Linux is recommended (better performance)
+\subsubsection{Repository}
+Clone the repository at tag paper\_v1.0:
+\begin{verbatim}
+git clone https://github.com/tad1/
+    Mandarin_Pronunciation_Recognition_Project
+git checkout paper_v1.0
+\end{verbatim}
 
-% \begin{verbatim}
-% ./data/source/pg_dataset
-% ├── assesment.csv
-% ├── assesment_round2.csv
-% ├── experiment.csv
-% ├── recordings
-% │   ├── stageI
-% │   │   └── {id}
-% │   │       └── {rec_id}.ogg
-% │   └── stageII
-% │       └── {id}
-% │           └── {rec_id}.ogg
-% └── tones_with_label.xls
-% \end{verbatim}
-
-The dataset files' version can be verified using the following MD5 hashes:
+\subsubsection{Dataset}
+The dataset files needs to be placed in \texttt{./data/source/pg\_dataset/}. Verify the correct file versions using these MD5 hashes:
 \begin{verbatim}
 d9bd78c33481236e86daef08b8862f08  assesment.csv
 933cffd064ca324669996a969a294856  assesment_round2.csv
@@ -290,10 +415,21 @@ f53bcea6845883c79d6f6a945d9561bc  experiment.csv
 7c71fbc6c1d44f0d19eaef6356a81dde  tones_with_label.xls
 \end{verbatim}
 
-% `../src/data/source/pg_experiment.py' is responsible for data cleaning and providing data in wide format.
+\subsubsection{Environment}
+Install dependencies using uv (recommended) or pip:
+\begin{verbatim}
+uv sync
+\end{verbatim}
 
-- dependencies can be installed using pip (from requirements.txt), or uv; the uv is recommended:
+The implementation uses CUDA acceleration on GPU (tested on NVIDIA GTX 1060 6GB). Other devices supported by PyTorch can be used by changing target device in the notebook. Development and testing are primarily conducted on Linux. While the code should work on Windows, compatibility is not continuously verified.
 
+\subsubsection{Execution}
+Open and run the experiment notebook:
+\begin{verbatim}
+src/hypothesis.ipynb
+\end{verbatim}
+
+Execute all cells sequentially using a notebook environment of your choice. The notebook handles data loading, preprocessing, model training, and evaluation.
 
 
 \end{document}
